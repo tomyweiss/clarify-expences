@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  clarify-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d
+    command: postgres -c ssl=off
+    networks:
+      - clarify-network
+
+  clarify-app:
+    build:
+      context: ./app
+    environment:
+      - CLARIFY_DB_USER=myuser
+      - CLARIFY_DB_HOST=clarify-db
+      - CLARIFY_DB_NAME=mydb
+      - CLARIFY_DB_PASSWORD=mypassword
+      - CLARIFY_DB_PORT=5432
+    ports:
+      - "3000:3000"
+    depends_on:
+      - clarify-db
+    command: "npm run start"
+    networks:
+      - clarify-network
+
+volumes:
+  db-data:
+
+networks:
+  clarify-network:
+    driver: bridge
