@@ -18,7 +18,18 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
 - Visual breakdown of your income and expenses  
 - Spending trends over time  
 - Overview of cash flow and category-wise distribution  
-  
+
+### 📸 Screenshots
+
+#### Dashboard Overview
+![Dashboard](app/public/screenshots/dashboard.png)
+
+#### Expenses
+![Transactions](app/public/screenshots/expenses.png)
+
+#### Income
+![Analytics](app/public/screenshots/income.png)
+
 ---
 
 ## 🧰 Tech Stack
