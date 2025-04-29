@@ -71,6 +71,18 @@ export default async function handler(
       throw new Error('Invalid company ID');
     }
 
+    // Prepare credentials based on company type
+    const scraperCredentials = options.companyId === 'visaCal' || options.companyId === 'max'
+      ? {
+          username: credentials.username,
+          password: credentials.password
+        }
+      : {
+          id: credentials.id,
+          card6Digits: credentials.card6Digits,
+          password: credentials.password
+        };
+
     const scraper = createScraper({
       ...options,
       companyId,
@@ -79,7 +91,7 @@ export default async function handler(
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
-    const result = await scraper.scrape(credentials);
+    const result = await scraper.scrape(scraperCredentials);
     console.log('Scraping result:');
     console.log(JSON.stringify(result, null, 2));
     if (!result.success) {

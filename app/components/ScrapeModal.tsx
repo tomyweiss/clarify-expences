@@ -27,6 +27,7 @@ interface ScraperConfig {
     id?: string;
     card6Digits?: string;
     password?: string;
+    username?: string;
   };
 }
 
@@ -50,7 +51,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
     credentials: {
       id: '',
       card6Digits: '',
-      password: ''
+      password: '',
+      username: ''
     }
   };
   const [config, setConfig] = useState<ScraperConfig>(defaultConfig);
@@ -159,6 +161,9 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
               onChange={(e) => handleConfigChange('options.companyId', e.target.value)}
             >
               <MenuItem value="isracard">Isracard</MenuItem>
+              <MenuItem value="visaCal">VisaCal</MenuItem>
+              <MenuItem value="amex">American Express</MenuItem>
+              <MenuItem value="max">Max</MenuItem>
             </Select>
           </FormControl>
 
@@ -192,19 +197,30 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
             label="Show Browser"
           />
 
-          <TextField
-            label="ID"
-            value={config.credentials.id}
-            onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
-            fullWidth
-          />
+          {config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
+            <TextField
+              label="Username"
+              value={config.credentials.username}
+              onChange={(e) => handleConfigChange('credentials.username', e.target.value)}
+              fullWidth
+            />
+          ) : (
+            <>
+              <TextField
+                label="ID"
+                value={config.credentials.id}
+                onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
+                fullWidth
+              />
 
-          <TextField
-            label="Card 6 Digits"
-            value={config.credentials.card6Digits}
-            onChange={(e) => handleConfigChange('credentials.card6Digits', e.target.value)}
-            fullWidth
-          />
+              <TextField
+                label="Card 6 Digits"
+                value={config.credentials.card6Digits}
+                onChange={(e) => handleConfigChange('credentials.card6Digits', e.target.value)}
+                fullWidth
+              />
+            </>
+          )}
 
           <TextField
             label="Password"
