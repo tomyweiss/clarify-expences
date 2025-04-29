@@ -4,10 +4,12 @@ services:
   clarify-db:
     image: postgres:16
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: mydb
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: ${CLARIFY_DB_NAME}
+      POSTGRES_USER: ${CLARIFY_DB_USER}
+      POSTGRES_PASSWORD: ${CLARIFY_DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -20,12 +22,14 @@ services:
   clarify-app:
     build:
       context: ./app
+    env_file:
+      - .env
     environment:
-      - CLARIFY_DB_USER=myuser
-      - CLARIFY_DB_HOST=clarify-db
-      - CLARIFY_DB_NAME=mydb
-      - CLARIFY_DB_PASSWORD=mypassword
-      - CLARIFY_DB_PORT=5432
+      - CLARIFY_DB_USER=${CLARIFY_DB_USER}
+      - CLARIFY_DB_HOST=${CLARIFY_DB_HOST}
+      - CLARIFY_DB_NAME=${CLARIFY_DB_NAME}
+      - CLARIFY_DB_PASSWORD=${CLARIFY_DB_PASSWORD}
+      - CLARIFY_DB_PORT=${CLARIFY_DB_PORT}
     ports:
       - "3000:3000"
     depends_on:

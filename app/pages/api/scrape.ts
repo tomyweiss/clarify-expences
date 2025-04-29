@@ -66,8 +66,6 @@ export default async function handler(
   const client = await pool.connect();
   try {
     const { options, credentials } = req.body;
-    console.log(options, credentials);
-    // Convert string companyId to CompanyTypes enum
     const companyId = CompanyTypes[options.companyId as keyof typeof CompanyTypes];
     if (!companyId) {
       throw new Error('Invalid company ID');
@@ -82,8 +80,8 @@ export default async function handler(
     });
 
     const result = await scraper.scrape(credentials);
-    console.log('result');
-    console.log(result);
+    console.log('Scraping result:');
+    console.log(JSON.stringify(result, null, 2));
     if (!result.success) {
       throw new Error(result.errorType || 'Scraping failed');
     }

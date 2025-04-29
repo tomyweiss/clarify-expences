@@ -62,7 +62,7 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
    cd app  
    npm install
 
-3. **Create a `.env` file** in the `app` directory:
+3. **Create a `.env` file** in the main directory:
    DB_USER=myuser  
    DB_HOST=localhost  
    DB_NAME=mydb  
