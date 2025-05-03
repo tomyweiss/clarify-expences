@@ -10,6 +10,7 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
 
 ### 💸 Smart Finance Tracking
 - **Automatic transaction import** from Israeli banks and credit vendors  
+- **Secure credential management** with end-to-end encryption
 - **Category-based tracking** for all expenses  
 - **Income management** with custom tagging  
 - **Monthly & yearly summaries** to see your financial health at a glance  
@@ -18,6 +19,10 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
 - Visual breakdown of your income and expenses  
 - Spending trends over time  
 - Overview of cash flow and category-wise distribution  
+
+### 🔒 Security Features
+- End-to-end encryption for sensitive credentials
+- Secure credential storage and management
 
 ### 📸 Screenshots
 
@@ -107,6 +112,7 @@ clarify-expenses/
 | DB_NAME       | Database name             |  
 | DB_PASSWORD   | PostgreSQL password       |  
 | DB_PORT       | Database port (default: 5432) |
+| ENCRYPTION_KEY| Key for credential encryption (required) |
 
 ---
 
@@ -130,5 +136,4 @@ For support, open an issue in this repository.
 
 ## 🙌 Credits
 
-- Bank scraping integration powered by [`israeli-bank-scrapers`](https://github.com/eshaham/israeli-bank-scrapers)  
-- Built with ❤️ using modern open-source tools
+- Bank scraping integration powered by [`israeli-bank-scrapers`](https://github.com/eshaham/israeli-bank-scrapers) 
