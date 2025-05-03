@@ -10,9 +10,11 @@ import { styled } from "@mui/material/styles";
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import SyncIcon from '@mui/icons-material/Sync';
 import AddIcon from '@mui/icons-material/Add';
+import PersonIcon from '@mui/icons-material/Person';
 import ScrapeModal from './ScrapeModal';
 import NewIncomeModal from './NewIncomeModal';
 import DatabaseIndicator from './DatabaseIndicator';
+import AccountsModal from './AccountsModal';
 
 interface StringDictionary {
   [key: string]: string;
@@ -93,6 +95,7 @@ function ResponsiveAppBar() {
   const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
   const [isScrapeModalOpen, setIsScrapeModalOpen] = React.useState(false);
   const [isNewIncomeModalOpen, setIsNewIncomeModalOpen] = React.useState(false);
+  const [isAccountsModalOpen, setIsAccountsModalOpen] = React.useState(false);
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
@@ -178,6 +181,12 @@ function ResponsiveAppBar() {
               >
                 Scrape
               </NavButton>
+              <NavButton
+                onClick={() => setIsAccountsModalOpen(true)}
+                startIcon={<PersonIcon />}
+              >
+                Accounts
+              </NavButton>
               <Menu
                 sx={{ mt: "45px" }}
                 id="menu-appbar"
@@ -207,6 +216,10 @@ function ResponsiveAppBar() {
         open={isNewIncomeModalOpen}
         onClose={() => setIsNewIncomeModalOpen(false)}
         onSave={handleAddNewIncome}
+      />
+      <AccountsModal
+        isOpen={isAccountsModalOpen}
+        onClose={() => setIsAccountsModalOpen(false)}
       />
     </>
   );

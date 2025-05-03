@@ -1,12 +1,12 @@
 -- Create transactions table
 CREATE TABLE IF NOT EXISTS transactions (
-	id SERIAL PRIMARY KEY,
+	identifier VARCHAR(50) NOT NULL,
+	vendor VARCHAR(50) NOT NULL,
 	date DATE NOT NULL,
 	name VARCHAR(100) NOT NULL,
 	price FLOAT NOT NULL,
 	category VARCHAR(50),
 	type VARCHAR(20) NOT NULL,
-	identifier VARCHAR(50),
 	processed_date DATE,
 	original_amount FLOAT,
 	original_currency VARCHAR(3),
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 	status VARCHAR(20) NOT NULL,
 	installments_number INTEGER,
 	installments_total INTEGER,
-	UNIQUE(date, name, price)
+	PRIMARY KEY (identifier, vendor)
 );
 
 CREATE TABLE IF NOT EXISTS income (
@@ -23,4 +23,16 @@ CREATE TABLE IF NOT EXISTS income (
 	income_type VARCHAR(100) NOT NULL,
 	amount FLOAT NOT NULL,
 	date DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS vendor_credentials (
+	id SERIAL PRIMARY KEY,
+    id_number VARCHAR(100),
+	username VARCHAR(100),
+	vendor VARCHAR(100) NOT NULL,
+    password VARCHAR(100),
+    card6_digits VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE (id_number, username, vendor)
 );

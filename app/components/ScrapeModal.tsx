@@ -40,6 +40,9 @@ interface ScrapeModalProps {
 export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveCredentials, setSaveCredentials] = useState(false);
+  const [savedCredentials, setSavedCredentials] = useState<any[]>([]);
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
   const defaultConfig: ScraperConfig = {
     options: {
       companyId: 'isracard',
@@ -59,12 +62,65 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
 
   useEffect(() => {
     if (!isOpen) {
-      // Reset all fields when modal closes
       setConfig(defaultConfig);
       setError(null);
       setIsLoading(false);
+      setSaveCredentials(false);
+      setSavedCredentials([]);
+      setSelectedCredentialId(null);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const fetchSavedCredentials = async () => {
+      try {
+        const response = await fetch(`/api/credentials?vendor=${config.options.companyId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSavedCredentials(data.map((cred: any) => ({
+            id: `${cred.vendor}-${cred.id_number || cred.username}`,
+            ...cred
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching saved credentials:', error);
+      }
+    };
+
+    if (isOpen && config.options.companyId) {
+      fetchSavedCredentials();
+    }
+  }, [isOpen, config.options.companyId]);
+
+  useEffect(() => {
+    if (selectedCredentialId && savedCredentials.length > 0) {
+      const selectedCredential = savedCredentials.find(cred => cred.id === selectedCredentialId);
+      if (selectedCredential) {
+        setConfig(prev => ({
+          ...prev,
+          credentials: {
+            ...prev.credentials,
+            id: selectedCredential.id_number || '',
+            card6Digits: selectedCredential.card6_digits || '',
+            password: selectedCredential.password || '',
+            username: selectedCredential.username || ''
+          }
+        }));
+        setSaveCredentials(true);
+      }
+    } else {
+      setConfig(prev => ({
+        ...prev,
+        credentials: {
+          id: '',
+          card6Digits: '',
+          password: '',
+          username: ''
+        }
+      }));
+      setSaveCredentials(false);
+    }
+  }, [selectedCredentialId, savedCredentials]);
 
   const handleConfigChange = (field: string, value: any) => {
     if (field.includes('.')) {
@@ -89,6 +145,22 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
     setError(null);
     
     try {
+      if (saveCredentials) {
+        await fetch('/api/credentials', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            vendor: config.options.companyId,
+            username: config.credentials.username,
+            password: config.credentials.password,
+            id_number: config.credentials.id,
+            card6_digits: config.credentials.card6Digits
+          })
+        });
+      }
+
       const response = await fetch('/api/scrape', {
         method: 'POST',
         headers: {
@@ -167,6 +239,23 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
             </Select>
           </FormControl>
 
+          {savedCredentials.length > 0 && (
+            <FormControl fullWidth>
+              <InputLabel>Saved Credentials</InputLabel>
+              <Select
+                value={selectedCredentialId || ''}
+                label="Saved Credentials"
+                onChange={(e) => setSelectedCredentialId(e.target.value)}
+              >
+                {savedCredentials.map((cred) => (
+                  <MenuItem key={cred.id} value={cred.id}>
+                    {cred.username || cred.id_number || 'Saved Credentials'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
           <TextField
             label="Start Date"
             type="date"
@@ -229,51 +318,36 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
             onChange={(e) => handleConfigChange('credentials.password', e.target.value)}
             fullWidth
           />
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={saveCredentials}
+                onChange={(e) => setSaveCredentials(e.target.checked)}
+              />
+            }
+            label="Save credentials for future use"
+          />
         </Box>
       </DialogContent>
-      <DialogActions style={{ padding: '0 24px 24px' }}>
-        <Button 
-          onClick={onClose} 
-          sx={{ 
-            color: '#333',
-            backgroundColor: '#f1f5f9',
-            borderRadius: '12px',
-            padding: '8px 16px',
-            border: '1px solid #e2e8f0',
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': {
-              backgroundColor: '#e2e8f0',
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-            },
-            '&:active': {
-              transform: 'translateY(0)',
-            },
-          }}
-          disabled={isLoading}
-        >
+      <DialogActions style={{ padding: '16px 24px' }}>
+        <Button onClick={onClose} style={{ color: '#666' }}>
           Cancel
         </Button>
-        <Button 
+        <Button
           onClick={handleScrape}
-          sx={{ 
-            color: '#fff',
-            backgroundColor: '#3b82f6',
-            borderRadius: '12px',
-            padding: '8px 16px',
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': {
-              backgroundColor: '#2563eb',
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
-            },
-            '&:active': {
-              transform: 'translateY(0)',
-            },
-          }}
+          variant="contained"
           disabled={isLoading}
+          style={{
+            backgroundColor: '#3b82f6',
+            color: '#fff',
+            padding: '8px 24px',
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 500
+          }}
         >
-          {isLoading ? 'Scraping...' : 'Start Scraping'}
+          {isLoading ? 'Scraping...' : 'Scrape'}
         </Button>
       </DialogActions>
     </Dialog>
