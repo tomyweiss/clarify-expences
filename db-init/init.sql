@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS vendor_credentials (
 	vendor VARCHAR(100) NOT NULL,
     password VARCHAR(100),
     card6_digits VARCHAR(100),
+    nickname VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	UNIQUE (id_number, username, vendor)

@@ -29,7 +29,7 @@ const handler = createApiHandler({
         };
       }
       if (req.method === 'POST') {
-        const { vendor, username, password, id_number, card6_digits } = req.body;
+        const { vendor, username, password, id_number, card6_digits, nickname } = req.body;
         
         // Encrypt sensitive data
         const encryptedData = {
@@ -37,13 +37,14 @@ const handler = createApiHandler({
           username: username ? encrypt(username) : null,
           password: password ? encrypt(password) : null,
           id_number: id_number ? encrypt(id_number) : null,
-          card6_digits: card6_digits ? encrypt(card6_digits) : null
+          card6_digits: card6_digits ? encrypt(card6_digits) : null,
+          nickname
         };
 
         return {
           sql: `
-            INSERT INTO vendor_credentials (vendor, username, password, id_number, card6_digits)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO vendor_credentials (vendor, username, password, id_number, card6_digits, nickname)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
           `,
           params: [
@@ -51,7 +52,8 @@ const handler = createApiHandler({
             encryptedData.username,
             encryptedData.password,
             encryptedData.id_number,
-            encryptedData.card6_digits
+            encryptedData.card6_digits,
+            encryptedData.nickname
           ]
         };
       }
@@ -68,6 +70,7 @@ const handler = createApiHandler({
         password: row.password ? decrypt(row.password) : null,
         id_number: row.id_number ? decrypt(row.id_number) : null,
         card6_digits: row.card6_digits ? decrypt(row.card6_digits) : null,
+        nickname: row.nickname,
         created_at: row.created_at
       }));
     }

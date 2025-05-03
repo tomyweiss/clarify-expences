@@ -16,7 +16,9 @@ const handler = createApiHandler({
             name,
             price,
             date,
-            category
+            category,
+            identifier,
+            vendor
           FROM transactions 
           WHERE TO_CHAR(date, 'YYYY-MM') = $1 
           ORDER BY date DESC
@@ -30,7 +32,9 @@ const handler = createApiHandler({
         SELECT 
           name,
           price,
-          date
+          date,
+          identifier,
+          vendor
         FROM transactions 
         WHERE TO_CHAR(date, 'YYYY-MM') = $1 
         AND category = $2

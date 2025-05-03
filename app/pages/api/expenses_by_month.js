@@ -15,8 +15,8 @@ const handler = createApiHandler({
     if (groupByYearBool) {
       return {
         sql: `
-          SELECT 
-            SUM(ABS(price)) AS amount,
+          SELECT
+            SUM(price) AS amount,
             TO_CHAR(date, 'YYYY') AS year,
             DATE_TRUNC('year', date) AS year_sort
           FROM transactions
@@ -31,7 +31,7 @@ const handler = createApiHandler({
     return {
       sql: `
         SELECT 
-          SUM(ABS(price)) AS amount,
+          SUM(price) AS amount,
           TO_CHAR(date, 'YYYY') AS year,
           TO_CHAR(date, 'MM') AS month,
           TO_CHAR(date, 'MM-YYYY') AS year_month,

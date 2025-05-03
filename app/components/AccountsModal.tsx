@@ -1,25 +1,23 @@
-import { useState, useEffect } from 'react';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Button from '@mui/material/Button';
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Box,
+  Button,
+  TextField,
+  MenuItem,
+  styled,
+} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import IconButton from '@mui/material/IconButton';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Box from '@mui/material/Box';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import TextField from '@mui/material/TextField';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import { styled } from '@mui/material/styles';
 
 interface Account {
   id: number;
@@ -27,6 +25,8 @@ interface Account {
   username?: string;
   id_number?: string;
   card6_digits?: string;
+  nickname?: string;
+  password?: string;
   created_at: string;
 }
 
@@ -39,41 +39,23 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:nth-of-type(odd)': {
     backgroundColor: theme.palette.action.hover,
   },
-  '&:last-child td, &:last-child th': {
-    border: 0,
-  },
 }));
 
 export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newAccount, setNewAccount] = useState({
+  const [isAdding, setIsAdding] = useState(false);
+  const [newAccount, setNewAccount] = useState<Account>({
     vendor: 'isracard',
     username: '',
     id_number: '',
     card6_digits: '',
-    password: ''
+    password: '',
+    nickname: '',
+    id: 0,
+    created_at: new Date().toISOString(),
   });
-  const [isAdding, setIsAdding] = useState(false);
-
-  const fetchAccounts = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/credentials');
-      if (response.ok) {
-        const data = await response.json();
-        setAccounts(data);
-      } else {
-        throw new Error('Failed to fetch accounts');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   useEffect(() => {
     if (isOpen) {
@@ -81,17 +63,50 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
     }
   }, [isOpen]);
 
+  const fetchAccounts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/credentials');
+      if (!response.ok) {
+        throw new Error('Failed to fetch accounts');
+      }
+      const data = await response.json();
+      setAccounts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAdd = async () => {
-    if ((newAccount.vendor === 'visaCal' || newAccount.vendor === 'max') && !newAccount.username) {
-      setError('Username is required for this vendor');
-      return;
+    // Validate based on vendor type
+    if (newAccount.vendor === 'visaCal' || newAccount.vendor === 'max') {
+      if (!newAccount.username) {
+        setError('Username is required for Visa Cal and Max');
+        return;
+      }
+      if (newAccount.id_number) {
+        setError('ID number is not used for Visa Cal and Max');
+        return;
+      }
+    } else if (newAccount.vendor === 'isracard' || newAccount.vendor === 'amex') {
+      if (!newAccount.id_number) {
+        setError('ID number is required for Isracard and American Express');
+        return;
+      }
+      if (newAccount.username) {
+        setError('Username is not used for Isracard and American Express');
+        return;
+      }
     }
-    if ((newAccount.vendor === 'isracard' || newAccount.vendor === 'amex') && !newAccount.id_number) {
-      setError('ID number is required for this vendor');
-      return;
-    }
+
     if (!newAccount.password) {
       setError('Password is required');
+      return;
+    }
+    if (!newAccount.nickname) {
+      setError('Account nickname is required');
       return;
     }
 
@@ -106,7 +121,16 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
 
       if (response.ok) {
         await fetchAccounts();
-        setNewAccount({ vendor: 'isracard', username: '', id_number: '', card6_digits: '', password: '' });
+        setNewAccount({
+          vendor: 'isracard',
+          username: '',
+          id_number: '',
+          card6_digits: '',
+          password: '',
+          nickname: '',
+          id: 0,
+          created_at: new Date().toISOString(),
+        });
         setIsAdding(false);
       } else {
         throw new Error('Failed to add account');
@@ -132,19 +156,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
   };
 
   return (
-    <Dialog 
-      open={isOpen} 
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        style: {
-          backgroundColor: '#ffffff',
-          borderRadius: '24px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-        }
-      }}
-    >
+    <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle style={{ 
         color: '#333',
         display: 'flex',
@@ -153,9 +165,9 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
         padding: '24px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span>Saved Accounts</span>
+          <span>Bank Accounts</span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -176,7 +188,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
       </DialogTitle>
       <DialogContent style={{ padding: '0 24px 24px' }}>
         {error && (
-          <Box sx={{
+          <div style={{
             backgroundColor: '#fee2e2',
             border: '1px solid #fecaca',
             color: '#dc2626',
@@ -185,105 +197,99 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             marginBottom: '16px'
           }}>
             {error}
-          </Box>
-        )}
-        {isAdding && (
-          <Box sx={{ 
-            padding: '16px', 
-            border: '1px solid #e2e8f0', 
-            borderRadius: '8px',
-            marginBottom: '16px',
-            backgroundColor: '#f8fafc'
-          }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <FormControl fullWidth>
-                <InputLabel>Vendor</InputLabel>
-                <Select
-                  value={newAccount.vendor}
-                  label="Vendor"
-                  onChange={(e) => setNewAccount({...newAccount, vendor: e.target.value})}
-                >
-                  <MenuItem value="isracard">Isracard</MenuItem>
-                  <MenuItem value="visaCal">VisaCal</MenuItem>
-                  <MenuItem value="amex">American Express</MenuItem>
-                  <MenuItem value="max">Max</MenuItem>
-                </Select>
-              </FormControl>
-
-              {(newAccount.vendor === 'visaCal' || newAccount.vendor === 'max') ? (
-                <TextField
-                  label="Username"
-                  value={newAccount.username}
-                  onChange={(e) => setNewAccount({...newAccount, username: e.target.value})}
-                  required
-                  fullWidth
-                />
-              ) : (
-                <>
-                  <TextField
-                    label="ID Number"
-                    value={newAccount.id_number}
-                    onChange={(e) => setNewAccount({...newAccount, id_number: e.target.value})}
-                    required
-                    fullWidth
-                  />
-                  <TextField
-                    label="Card Last 6 Digits"
-                    value={newAccount.card6_digits}
-                    onChange={(e) => setNewAccount({...newAccount, card6_digits: e.target.value})}
-                    required
-                    fullWidth
-                  />
-                </>
-              )}
-
-              <TextField
-                label="Password"
-                type="password"
-                value={newAccount.password}
-                onChange={(e) => setNewAccount({...newAccount, password: e.target.value})}
-                required
-                fullWidth
-              />
-
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setIsAdding(false);
-                    setNewAccount({ vendor: 'isracard', username: '', id_number: '', card6_digits: '', password: '' });
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handleAdd}
-                  sx={{
-                    backgroundColor: '#3b82f6',
-                    '&:hover': {
-                      backgroundColor: '#2563eb',
-                    },
-                  }}
-                >
-                  Add Account
-                </Button>
-              </Box>
-            </Box>
-          </Box>
+          </div>
         )}
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
             Loading accounts...
           </Box>
-        ) : accounts.length === 0 ? (
+        ) : accounts.length === 0 && !isAdding ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
             No saved accounts found
+          </Box>
+        ) : isAdding ? (
+          <Box sx={{ p: 2 }}>
+            <TextField
+              fullWidth
+              label="Account Nickname"
+              value={newAccount.nickname}
+              onChange={(e) => setNewAccount({ ...newAccount, nickname: e.target.value })}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              select
+              label="Vendor"
+              value={newAccount.vendor}
+              onChange={(e) => {
+                const vendor = e.target.value;
+                setNewAccount({
+                  ...newAccount,
+                  vendor,
+                  // Clear fields that are not used for the selected vendor
+                  username: vendor === 'visaCal' || vendor === 'max' ? newAccount.username : '',
+                  id_number: vendor === 'isracard' || vendor === 'amex' ? newAccount.id_number : '',
+                });
+              }}
+              margin="normal"
+            >
+              <MenuItem value="isracard">Isracard</MenuItem>
+              <MenuItem value="amex">American Express</MenuItem>
+              <MenuItem value="visaCal">Visa Cal</MenuItem>
+              <MenuItem value="max">Max</MenuItem>
+            </TextField>
+            {(newAccount.vendor === 'visaCal' || newAccount.vendor === 'max') ? (
+              <TextField
+                fullWidth
+                label="Username"
+                value={newAccount.username}
+                onChange={(e) => setNewAccount({ ...newAccount, username: e.target.value })}
+                margin="normal"
+                required
+              />
+            ) : (
+              <TextField
+                fullWidth
+                label="ID Number"
+                value={newAccount.id_number}
+                onChange={(e) => setNewAccount({ ...newAccount, id_number: e.target.value })}
+                margin="normal"
+                required
+              />
+            )}
+            {(newAccount.vendor === 'isracard' || newAccount.vendor === 'amex') && (
+              <TextField
+                fullWidth
+                label="Card Last 6 Digits"
+                value={newAccount.card6_digits}
+                onChange={(e) => setNewAccount({ ...newAccount, card6_digits: e.target.value })}
+                margin="normal"
+              />
+            )}
+            <TextField
+              fullWidth
+              label="Password"
+              type="password"
+              value={newAccount.password}
+              onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })}
+              margin="normal"
+              required
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Button onClick={() => setIsAdding(false)} sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleAdd}>
+                Add
+              </Button>
+            </Box>
           </Box>
         ) : (
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell>Nickname</TableCell>
                 <TableCell>Vendor</TableCell>
                 <TableCell>Username/ID</TableCell>
                 <TableCell>Card Last Digits</TableCell>
@@ -294,6 +300,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             <TableBody>
               {accounts.map((account, index) => (
                 <StyledTableRow key={account.id}>
+                  <TableCell>{account.nickname}</TableCell>
                   <TableCell>{account.vendor}</TableCell>
                   <TableCell>{account.username || account.id_number}</TableCell>
                   <TableCell>{account.card6_digits || '-'}</TableCell>
@@ -312,29 +319,6 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
           </Table>
         )}
       </DialogContent>
-      <DialogActions style={{ padding: '16px 24px' }}>
-        <Button 
-          onClick={onClose}
-          sx={{
-            color: '#333',
-            backgroundColor: '#f1f5f9',
-            borderRadius: '12px',
-            padding: '8px 16px',
-            border: '1px solid #e2e8f0',
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': {
-              backgroundColor: '#e2e8f0',
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-            },
-            '&:active': {
-              transform: 'translateY(0)',
-            },
-          }}
-        >
-          Close
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 } 

@@ -3,12 +3,14 @@ import IconButton from '@mui/material/IconButton';
 import SortIcon from '@mui/icons-material/Sort';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import TableChartIcon from '@mui/icons-material/TableChart';
 import Button from '@mui/material/Button';
 import { ResponseData, Expense, Income, ModalData } from './types';
 import { useCategoryIcons, useCategoryColors } from './utils/categoryUtils';
 import Card from './components/Card';
 import ExpensesModal from './components/ExpensesModal';
 import MetricsPanel from './components/MetricsPanel';
+import TransactionsTable from './components/TransactionsTable';
 
 const CategoryDashboard: React.FC = () => {
   const [sumPerCategory, setSumPerCategory] = React.useState<ResponseData[]>([]);
@@ -23,6 +25,9 @@ const CategoryDashboard: React.FC = () => {
   const [loadingCategory, setLoadingCategory] = React.useState<string | null>(null);
   const [loadingIncome, setLoadingIncome] = React.useState(false);
   const [modalData, setModalData] = React.useState<ModalData>();
+  const [showTransactionsTable, setShowTransactionsTable] = React.useState(false);
+  const [transactions, setTransactions] = React.useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = React.useState(false);
   const categoryIcons = useCategoryIcons();
   const categoryColors = useCategoryColors();
   const [allAvailableDates, setAllAvailableDates] = React.useState<string[]>([]);
@@ -42,6 +47,12 @@ const CategoryDashboard: React.FC = () => {
       window.removeEventListener('dataRefresh', handleDataRefresh);
     };
   }, []);
+
+  React.useEffect(() => {
+    if (showTransactionsTable) {
+      fetchTransactions();
+    }
+  }, [selectedYear, selectedMonth]);
 
   const getAvailableMonths = async () => {
     try {
@@ -127,7 +138,7 @@ const CategoryDashboard: React.FC = () => {
       
       // Calculate totals using the value field
       const expenses = data.reduce((acc: number, curr: ResponseData) => 
-        acc + Math.abs(curr.value), 0);
+        acc + curr.value, 0);
       
       setTotalExpenses(expenses);
       
@@ -278,6 +289,84 @@ const CategoryDashboard: React.FC = () => {
     }
   };
 
+  const handleTransactionsTableClick = async () => {
+    const newShowTransactionsTable = !showTransactionsTable;
+    setShowTransactionsTable(newShowTransactionsTable);
+    if (!newShowTransactionsTable){
+      return;
+    }
+
+    fetchTransactions();
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      setLoadingTransactions(true);
+      const url = new URL("/api/category_expenses", window.location.origin);
+      const params = new URLSearchParams();
+      const fullMonth = `${selectedYear}-${selectedMonth}`;
+      params.append("month", fullMonth);
+      params.append("all", "true");
+      url.search = params.toString();
+
+      const response = await fetch(url.toString());
+      const transactionsData = await response.json();
+      setTransactions(transactionsData);
+    } catch (error) {
+      console.error("Error fetching transactions data:", error);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (transaction: any) => {
+    try {
+      const response = await fetch(`/api/transactions/${transaction.identifier}|${transaction.vendor}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        // Remove the transaction from the local state
+        setTransactions(transactions.filter(t => 
+          t.identifier !== transaction.identifier || t.vendor !== transaction.vendor
+        ));
+        // Refresh the data to update the metrics
+        fetchData(`${selectedYear}-${selectedMonth}`);
+      } else {
+        throw new Error('Failed to delete transaction');
+      }
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+    }
+  };
+
+  const handleUpdateTransaction = async (transaction: any, newPrice: number) => {
+    try {
+      const response = await fetch(`/api/transactions/${transaction.identifier}|${transaction.vendor}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ price: newPrice }),
+      });
+      
+      if (response.ok) {
+        // Update the transaction in the local state
+        setTransactions(transactions.map(t => 
+          t.identifier === transaction.identifier && t.vendor === transaction.vendor
+            ? { ...t, price: newPrice }
+            : t
+        ));
+        // Refresh the data to update the metrics
+        fetchData(`${selectedYear}-${selectedMonth}`);
+      } else {
+        throw new Error('Failed to update transaction');
+      }
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+    }
+  };
+
   return (
     <div style={{ 
       padding: '24px',
@@ -296,6 +385,19 @@ const CategoryDashboard: React.FC = () => {
         marginTop: '16px',
         gap: '12px'
       }}>
+        <IconButton
+          onClick={handleTransactionsTableClick}
+          style={{
+            backgroundColor: showTransactionsTable ? '#edf2f7' : '#ffffff',
+            padding: '12px',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            color: showTransactionsTable ? '#333' : '#888',
+            transition: 'all 0.2s ease-in-out'
+          }}
+        >
+          <TableChartIcon />
+        </IconButton>
         <IconButton
           onClick={() => setIsSorted(!isSorted)}
           style={{
@@ -383,16 +485,24 @@ const CategoryDashboard: React.FC = () => {
         />
       </div>
 
-      <div style={{ 
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-        columnGap: '64px',
-        rowGap: '32px',
-        width: '100%',
-        maxWidth: '1360px',
-        boxSizing: 'border-box'
-      }}>
-        {categories.map((category, index) => (
+      {showTransactionsTable ? (
+        <TransactionsTable 
+          transactions={transactions} 
+          isLoading={loadingTransactions}
+          onDelete={handleDeleteTransaction}
+          onUpdate={handleUpdateTransaction}
+        />
+      ) : (
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          columnGap: '64px',
+          rowGap: '32px',
+          width: '100%',
+          maxWidth: '1360px',
+          boxSizing: 'border-box'
+        }}>
+          {categories.map((category, index) => (
             <Card
               key={"category-" + index}
               title={category.name}
@@ -403,8 +513,9 @@ const CategoryDashboard: React.FC = () => {
               isLoading={loadingCategory === category.name}
               size="medium"
             />
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {modalData && (
         <ExpensesModal

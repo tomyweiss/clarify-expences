@@ -28,6 +28,7 @@ interface ScraperConfig {
     card6Digits?: string;
     password?: string;
     username?: string;
+    nickname?: string;
   };
 }
 
@@ -43,6 +44,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
   const [saveCredentials, setSaveCredentials] = useState(false);
   const [savedCredentials, setSavedCredentials] = useState<any[]>([]);
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
+  const [showCredentialsForm, setShowCredentialsForm] = useState(false);
   const defaultConfig: ScraperConfig = {
     options: {
       companyId: 'isracard',
@@ -55,7 +57,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
       id: '',
       card6Digits: '',
       password: '',
-      username: ''
+      username: '',
+      nickname: ''
     }
   };
   const [config, setConfig] = useState<ScraperConfig>(defaultConfig);
@@ -68,6 +71,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
       setSaveCredentials(false);
       setSavedCredentials([]);
       setSelectedCredentialId(null);
+      setShowCredentialsForm(false);
     }
   }, [isOpen]);
 
@@ -103,10 +107,10 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
             id: selectedCredential.id_number || '',
             card6Digits: selectedCredential.card6_digits || '',
             password: selectedCredential.password || '',
-            username: selectedCredential.username || ''
+            username: selectedCredential.username || '',
+            nickname: selectedCredential.nickname || ''
           }
         }));
-        setSaveCredentials(true);
       }
     } else {
       setConfig(prev => ({
@@ -115,7 +119,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
           id: '',
           card6Digits: '',
           password: '',
-          username: ''
+          username: '',
+          nickname: ''
         }
       }));
       setSaveCredentials(false);
@@ -146,6 +151,10 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
     
     try {
       if (saveCredentials) {
+        if (!config.credentials.nickname) {
+          setError('Account nickname is required when saving credentials');
+          return;
+        }
         await fetch('/api/credentials', {
           method: 'POST',
           headers: {
@@ -156,7 +165,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
             username: config.credentials.username,
             password: config.credentials.password,
             id_number: config.credentials.id,
-            card6_digits: config.credentials.card6Digits
+            card6_digits: config.credentials.card6Digits,
+            nickname: config.credentials.nickname
           })
         });
       }
@@ -226,11 +236,15 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
           <FormControl fullWidth>
-            <InputLabel>Bank</InputLabel>
+            <InputLabel>Vendor</InputLabel>
             <Select
               value={config.options.companyId}
-              label="Bank"
-              onChange={(e) => handleConfigChange('options.companyId', e.target.value)}
+              label="Vendor"
+              onChange={(e) => {
+                handleConfigChange('options.companyId', e.target.value);
+                setSelectedCredentialId(null);
+                setShowCredentialsForm(false);
+              }}
             >
               <MenuItem value="isracard">Isracard</MenuItem>
               <MenuItem value="visaCal">VisaCal</MenuItem>
@@ -238,23 +252,6 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
               <MenuItem value="max">Max</MenuItem>
             </Select>
           </FormControl>
-
-          {savedCredentials.length > 0 && (
-            <FormControl fullWidth>
-              <InputLabel>Saved Credentials</InputLabel>
-              <Select
-                value={selectedCredentialId || ''}
-                label="Saved Credentials"
-                onChange={(e) => setSelectedCredentialId(e.target.value)}
-              >
-                {savedCredentials.map((cred) => (
-                  <MenuItem key={cred.id} value={cred.id}>
-                    {cred.username || cred.id_number || 'Saved Credentials'}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
 
           <TextField
             label="Start Date"
@@ -266,68 +263,88 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
             }}
           />
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={config.options.combineInstallments}
-                onChange={(e) => handleConfigChange('options.combineInstallments', e.target.checked)}
-              />
-            }
-            label="Combine Installments"
-          />
-
-          <FormControlLabel
-            control={
-              <Switch
-                checked={config.options.showBrowser}
-                onChange={(e) => handleConfigChange('options.showBrowser', e.target.checked)}
-              />
-            }
-            label="Show Browser"
-          />
-
-          {config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
-            <TextField
-              label="Username"
-              value={config.credentials.username}
-              onChange={(e) => handleConfigChange('credentials.username', e.target.value)}
-              fullWidth
-            />
-          ) : (
+          {savedCredentials.length > 0 && !showCredentialsForm && (
             <>
-              <TextField
-                label="ID"
-                value={config.credentials.id}
-                onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
-                fullWidth
-              />
-
-              <TextField
-                label="Card 6 Digits"
-                value={config.credentials.card6Digits}
-                onChange={(e) => handleConfigChange('credentials.card6Digits', e.target.value)}
-                fullWidth
-              />
+              <FormControl fullWidth>
+                <InputLabel>Saved Accounts</InputLabel>
+                <Select
+                  value={selectedCredentialId || ''}
+                  label="Saved Accounts"
+                  onChange={(e) => setSelectedCredentialId(e.target.value)}
+                >
+                  {savedCredentials.map((cred) => (
+                    <MenuItem key={cred.id} value={cred.id}>
+                      {cred.nickname || cred.username || cred.id_number || 'Saved Account'}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button
+                variant="outlined"
+                onClick={() => setShowCredentialsForm(true)}
+                sx={{ mt: 2 }}
+              >
+                Use Different Credentials
+              </Button>
             </>
           )}
 
-          <TextField
-            label="Password"
-            type="password"
-            value={config.credentials.password}
-            onChange={(e) => handleConfigChange('credentials.password', e.target.value)}
-            fullWidth
-          />
+          {(!savedCredentials.length || showCredentialsForm) && (
+            <>
+              {config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
+                <TextField
+                  label="Username"
+                  value={config.credentials.username}
+                  onChange={(e) => handleConfigChange('credentials.username', e.target.value)}
+                  fullWidth
+                />
+              ) : (
+                <>
+                  <TextField
+                    label="ID"
+                    value={config.credentials.id}
+                    onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
+                    fullWidth
+                  />
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={saveCredentials}
-                onChange={(e) => setSaveCredentials(e.target.checked)}
+                  <TextField
+                    label="Card 6 Digits"
+                    value={config.credentials.card6Digits}
+                    onChange={(e) => handleConfigChange('credentials.card6Digits', e.target.value)}
+                    fullWidth
+                  />
+                </>
+              )}
+
+              <TextField
+                label="Password"
+                type="password"
+                value={config.credentials.password}
+                onChange={(e) => handleConfigChange('credentials.password', e.target.value)}
+                fullWidth
               />
-            }
-            label="Save credentials for future use"
-          />
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={saveCredentials}
+                    onChange={(e) => setSaveCredentials(e.target.checked)}
+                  />
+                }
+                label="Save credentials for future use"
+              />
+
+              {saveCredentials && (
+                <TextField
+                  label="Account Nickname"
+                  value={config.credentials.nickname || ''}
+                  onChange={(e) => handleConfigChange('credentials.nickname', e.target.value)}
+                  fullWidth
+                  required
+                />
+              )}
+            </>
+          )}
         </Box>
       </DialogContent>
       <DialogActions style={{ padding: '16px 24px' }}>

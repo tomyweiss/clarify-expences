@@ -1,16 +1,15 @@
 import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
-import { Pool } from 'pg';
-
-// Initialize the database connection pool
-const pool = new Pool({
-  user: process.env.CLARIFY_DB_USER,
-  host: process.env.CLARIFY_DB_HOST,
-  database: process.env.CLARIFY_DB_NAME,
-  password: process.env.CLARIFY_DB_PASSWORD,
-  port: process.env.CLARIFY_DB_PORT ? parseInt(process.env.CLARIFY_DB_PORT) : 5432
-});
+import crypto from 'crypto';
+import { getDB } from './db';
+import { get } from 'https';
 
 async function insertTransaction(txn, client, companyId) {
+  if (!txn.identifier || txn.identifier === ""){
+    const hash = crypto.createHash('sha1');
+    hash.update(txn.processed_date + companyId);
+    txn.identifier = hash.digest('hex');
+  }
+  
   try {
     await client.query(
       `INSERT INTO transactions (
@@ -60,7 +59,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const client = await pool.connect();
+  const client = await getDB();
   try {
     const { options, credentials } = req.body;
     const companyId = CompanyTypes[options.companyId];
