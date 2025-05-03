@@ -14,6 +14,8 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
 - **Category-based tracking** for all expenses  
 - **Income management** with custom tagging  
 - **Monthly & yearly summaries** to see your financial health at a glance  
+- **Saved accounts with nicknames** for quick access to your credentials
+- **Transaction management** with edit and delete capabilities
 
 ### 📊 Analytics & Insights
 - Visual breakdown of your income and expenses  
@@ -68,11 +70,12 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
    npm install
 
 3. **Create a `.env` file** in the main directory:
-   DB_USER=myuser  
-   DB_HOST=localhost  
-   DB_NAME=mydb  
-   DB_PASSWORD=mypassword  
-   DB_PORT=5432
+   CLARIFY_DB_USER=myuser  
+   CLARIFY_DB_HOST=localhost  
+   CLARIFY_DB_NAME=mydb  
+   CLARIFY_DB_PASSWORD=mypassword  
+   CLARIFY_DB_PORT=5432
+   CLARIFY_ENCRYPTION_KEY=your_encryption_key
 
 4. **Start the development server**
    npm run dev
@@ -94,6 +97,9 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
 clarify-expenses/  
 ├── app/                    # Next.js application  
 │   ├── components/         # Reusable UI components  
+│   │   ├── CategoryDashboard/  # Category management components  
+│   │   ├── AccountsModal/      # Account management modal  
+│   │   └── ScrapeModal/        # Transaction scraping modal  
 │   ├── pages/              # App pages and API routes  
 │   ├── public/             # Static files  
 │   └── styles/             # Global CSS and theme  
@@ -112,7 +118,7 @@ clarify-expenses/
 | DB_NAME       | Database name             |  
 | DB_PASSWORD   | PostgreSQL password       |  
 | DB_PORT       | Database port (default: 5432) |
-| ENCRYPTION_KEY| Key for credential encryption (required) |
+| CLARIFY_ENCRYPTION_KEY| Key for credential encryption (required) |
 
 ---
 
