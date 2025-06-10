@@ -11,8 +11,6 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Switch from '@mui/material/Switch';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import Box from '@mui/material/Box';
 
 interface ScraperConfig {
@@ -36,15 +34,12 @@ interface ScrapeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialConfig?: ScraperConfig;
 }
 
-export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalProps) {
+export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig }: ScrapeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveCredentials, setSaveCredentials] = useState(false);
-  const [savedCredentials, setSavedCredentials] = useState<any[]>([]);
-  const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
-  const [showCredentialsForm, setShowCredentialsForm] = useState(false);
   const defaultConfig: ScraperConfig = {
     options: {
       companyId: 'isracard',
@@ -61,71 +56,21 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
       nickname: ''
     }
   };
-  const [config, setConfig] = useState<ScraperConfig>(defaultConfig);
+  const [config, setConfig] = useState<ScraperConfig>(initialConfig || defaultConfig);
+
+  useEffect(() => {
+    if (initialConfig) {
+      setConfig(initialConfig);
+    }
+  }, [initialConfig]);
 
   useEffect(() => {
     if (!isOpen) {
       setConfig(defaultConfig);
       setError(null);
       setIsLoading(false);
-      setSaveCredentials(false);
-      setSavedCredentials([]);
-      setSelectedCredentialId(null);
-      setShowCredentialsForm(false);
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    const fetchSavedCredentials = async () => {
-      try {
-        const response = await fetch(`/api/credentials?vendor=${config.options.companyId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setSavedCredentials(data.map((cred: any) => ({
-            id: `${cred.vendor}-${cred.id_number || cred.username}`,
-            ...cred
-          })));
-        }
-      } catch (error) {
-        console.error('Error fetching saved credentials:', error);
-      }
-    };
-
-    if (isOpen && config.options.companyId) {
-      fetchSavedCredentials();
-    }
-  }, [isOpen, config.options.companyId]);
-
-  useEffect(() => {
-    if (selectedCredentialId && savedCredentials.length > 0) {
-      const selectedCredential = savedCredentials.find(cred => cred.id === selectedCredentialId);
-      if (selectedCredential) {
-        setConfig(prev => ({
-          ...prev,
-          credentials: {
-            ...prev.credentials,
-            id: selectedCredential.id_number || '',
-            card6Digits: selectedCredential.card6_digits || '',
-            password: selectedCredential.password || '',
-            username: selectedCredential.username || '',
-            nickname: selectedCredential.nickname || ''
-          }
-        }));
-      }
-    } else {
-      setConfig(prev => ({
-        ...prev,
-        credentials: {
-          id: '',
-          card6Digits: '',
-          password: '',
-          username: '',
-          nickname: ''
-        }
-      }));
-      setSaveCredentials(false);
-    }
-  }, [selectedCredentialId, savedCredentials]);
 
   const handleConfigChange = (field: string, value: any) => {
     if (field.includes('.')) {
@@ -150,27 +95,6 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
     setError(null);
     
     try {
-      if (saveCredentials) {
-        if (!config.credentials.nickname) {
-          setError('Account nickname is required when saving credentials');
-          return;
-        }
-        await fetch('/api/credentials', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            vendor: config.options.companyId,
-            username: config.credentials.username,
-            password: config.credentials.password,
-            id_number: config.credentials.id,
-            card6_digits: config.credentials.card6Digits,
-            nickname: config.credentials.nickname
-          })
-        });
-      }
-
       const response = await fetch('/api/scrape', {
         method: 'POST',
         headers: {
@@ -191,6 +115,86 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
       setIsLoading(false);
     }
   };
+
+  const renderNewScrapeForm = () => (
+    <>
+      <FormControl fullWidth>
+        <InputLabel>Vendor</InputLabel>
+        <Select
+          value={config.options.companyId}
+          label="Vendor"
+          onChange={(e) => handleConfigChange('options.companyId', e.target.value)}
+        >
+          <MenuItem value="isracard">Isracard</MenuItem>
+          <MenuItem value="visaCal">VisaCal</MenuItem>
+          <MenuItem value="amex">American Express</MenuItem>
+          <MenuItem value="max">Max</MenuItem>
+        </Select>
+      </FormControl>
+
+      <TextField
+        label="Start Date"
+        type="date"
+        value={config.options.startDate.toISOString().split('T')[0]}
+        onChange={(e) => handleConfigChange('options.startDate', new Date(e.target.value))}
+        InputLabelProps={{
+          shrink: true,
+        }}
+      />
+
+      {config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
+        <TextField
+          label="Username"
+          value={config.credentials.username}
+          onChange={(e) => handleConfigChange('credentials.username', e.target.value)}
+          fullWidth
+        />
+      ) : (
+        <>
+          <TextField
+            label="ID"
+            value={config.credentials.id}
+            onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Card 6 Digits"
+            value={config.credentials.card6Digits}
+            onChange={(e) => handleConfigChange('credentials.card6Digits', e.target.value)}
+            fullWidth
+          />
+        </>
+      )}
+
+      <TextField
+        label="Password"
+        type="password"
+        value={config.credentials.password}
+        onChange={(e) => handleConfigChange('credentials.password', e.target.value)}
+        fullWidth
+      />
+    </>
+  );
+
+  const renderExistingAccountForm = () => (
+    <>
+      <TextField
+        label="Account Nickname"
+        value={config.credentials.nickname}
+        disabled
+        fullWidth
+      />
+      <TextField
+        label="Start Date"
+        type="date"
+        value={config.options.startDate.toISOString().split('T')[0]}
+        onChange={(e) => handleConfigChange('options.startDate', new Date(e.target.value))}
+        InputLabelProps={{
+          shrink: true,
+        }}
+      />
+    </>
+  );
 
   return (
     <Dialog 
@@ -235,116 +239,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess }: ScrapeModalP
         )}
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel>Vendor</InputLabel>
-            <Select
-              value={config.options.companyId}
-              label="Vendor"
-              onChange={(e) => {
-                handleConfigChange('options.companyId', e.target.value);
-                setSelectedCredentialId(null);
-                setShowCredentialsForm(false);
-              }}
-            >
-              <MenuItem value="isracard">Isracard</MenuItem>
-              <MenuItem value="visaCal">VisaCal</MenuItem>
-              <MenuItem value="amex">American Express</MenuItem>
-              <MenuItem value="max">Max</MenuItem>
-            </Select>
-          </FormControl>
-
-          <TextField
-            label="Start Date"
-            type="date"
-            value={config.options.startDate.toISOString().split('T')[0]}
-            onChange={(e) => handleConfigChange('options.startDate', new Date(e.target.value))}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-
-          {savedCredentials.length > 0 && !showCredentialsForm && (
-            <>
-              <FormControl fullWidth>
-                <InputLabel>Saved Accounts</InputLabel>
-                <Select
-                  value={selectedCredentialId || ''}
-                  label="Saved Accounts"
-                  onChange={(e) => setSelectedCredentialId(e.target.value)}
-                >
-                  {savedCredentials.map((cred) => (
-                    <MenuItem key={cred.id} value={cred.id}>
-                      {cred.nickname || cred.username || cred.id_number || 'Saved Account'}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Button
-                variant="outlined"
-                onClick={() => setShowCredentialsForm(true)}
-                sx={{ mt: 2 }}
-              >
-                Use Different Credentials
-              </Button>
-            </>
-          )}
-
-          {(!savedCredentials.length || showCredentialsForm) && (
-            <>
-              {config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
-                <TextField
-                  label="Username"
-                  value={config.credentials.username}
-                  onChange={(e) => handleConfigChange('credentials.username', e.target.value)}
-                  fullWidth
-                />
-              ) : (
-                <>
-                  <TextField
-                    label="ID"
-                    value={config.credentials.id}
-                    onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
-                    fullWidth
-                  />
-
-                  <TextField
-                    label="Card 6 Digits"
-                    value={config.credentials.card6Digits}
-                    onChange={(e) => handleConfigChange('credentials.card6Digits', e.target.value)}
-                    fullWidth
-                  />
-                </>
-              )}
-
-              <TextField
-                label="Password"
-                type="password"
-                value={config.credentials.password}
-                onChange={(e) => handleConfigChange('credentials.password', e.target.value)}
-                fullWidth
-              />
-
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={saveCredentials}
-                    onChange={(e) => setSaveCredentials(e.target.checked)}
-                  />
-                }
-                label="Save credentials for future use"
-              />
-
-              {saveCredentials && (
-                <TextField
-                  label="Account Nickname"
-                  value={config.credentials.nickname || ''}
-                  onChange={(e) => handleConfigChange('credentials.nickname', e.target.value)}
-                  fullWidth
-                  required
-                />
-              )}
-            </>
-          )}
+          {initialConfig ? renderExistingAccountForm() : renderNewScrapeForm()}
         </Box>
       </DialogContent>
       <DialogActions style={{ padding: '16px 24px' }}>

@@ -18,6 +18,8 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import SyncIcon from '@mui/icons-material/Sync';
+import ScrapeModal from './ScrapeModal';
 
 interface Account {
   id: number;
@@ -46,6 +48,8 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isScrapeModalOpen, setIsScrapeModalOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [newAccount, setNewAccount] = useState<Account>({
     vendor: 'isracard',
     username: '',
@@ -71,6 +75,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
         throw new Error('Failed to fetch accounts');
       }
       const data = await response.json();
+      console.log('Fetched accounts:', data);
       setAccounts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -155,170 +160,229 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
     }
   };
 
+  const handleScrape = (account: Account) => {
+    console.log('Selected account for scraping:', account);
+    setSelectedAccount(account);
+    setIsScrapeModalOpen(true);
+  };
+
+  const handleScrapeSuccess = () => {
+    window.dispatchEvent(new CustomEvent('dataRefresh'));
+  };
+
+  useEffect(() => {
+    if (selectedAccount) {
+      console.log('Selected account changed:', selectedAccount);
+    }
+  }, [selectedAccount]);
+
   return (
-    <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle style={{ 
-        color: '#333',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '24px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span>Bank Accounts</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setIsAdding(true)}
-            sx={{
-              backgroundColor: '#3b82f6',
-              '&:hover': {
-                backgroundColor: '#2563eb',
-              },
-            }}
-          >
-            Add Account
-          </Button>
-          <IconButton onClick={onClose} style={{ color: '#888' }}>
-            <CloseIcon />
-          </IconButton>
-        </div>
-      </DialogTitle>
-      <DialogContent style={{ padding: '0 24px 24px' }}>
-        {error && (
-          <div style={{
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            padding: '16px',
-            borderRadius: '8px',
-            marginBottom: '16px'
-          }}>
-            {error}
+    <>
+      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle style={{ 
+          color: '#333',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '24px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span>Accounts</span>
           </div>
-        )}
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
-            Loading accounts...
-          </Box>
-        ) : accounts.length === 0 && !isAdding ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
-            No saved accounts found
-          </Box>
-        ) : isAdding ? (
-          <Box sx={{ p: 2 }}>
-            <TextField
-              fullWidth
-              label="Account Nickname"
-              value={newAccount.nickname}
-              onChange={(e) => setNewAccount({ ...newAccount, nickname: e.target.value })}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              select
-              label="Vendor"
-              value={newAccount.vendor}
-              onChange={(e) => {
-                const vendor = e.target.value;
-                setNewAccount({
-                  ...newAccount,
-                  vendor,
-                  // Clear fields that are not used for the selected vendor
-                  username: vendor === 'visaCal' || vendor === 'max' ? newAccount.username : '',
-                  id_number: vendor === 'isracard' || vendor === 'amex' ? newAccount.id_number : '',
-                });
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setIsAdding(true)}
+              sx={{
+                backgroundColor: '#3b82f6',
+                '&:hover': {
+                  backgroundColor: '#2563eb',
+                },
               }}
-              margin="normal"
             >
-              <MenuItem value="isracard">Isracard</MenuItem>
-              <MenuItem value="amex">American Express</MenuItem>
-              <MenuItem value="visaCal">Visa Cal</MenuItem>
-              <MenuItem value="max">Max</MenuItem>
-            </TextField>
-            {(newAccount.vendor === 'visaCal' || newAccount.vendor === 'max') ? (
-              <TextField
-                fullWidth
-                label="Username"
-                value={newAccount.username}
-                onChange={(e) => setNewAccount({ ...newAccount, username: e.target.value })}
-                margin="normal"
-                required
-              />
-            ) : (
-              <TextField
-                fullWidth
-                label="ID Number"
-                value={newAccount.id_number}
-                onChange={(e) => setNewAccount({ ...newAccount, id_number: e.target.value })}
-                margin="normal"
-                required
-              />
-            )}
-            {(newAccount.vendor === 'isracard' || newAccount.vendor === 'amex') && (
-              <TextField
-                fullWidth
-                label="Card Last 6 Digits"
-                value={newAccount.card6_digits}
-                onChange={(e) => setNewAccount({ ...newAccount, card6_digits: e.target.value })}
-                margin="normal"
-              />
-            )}
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={newAccount.password}
-              onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })}
-              margin="normal"
-              required
-            />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-              <Button onClick={() => setIsAdding(false)} sx={{ mr: 1 }}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleAdd}>
-                Add
-              </Button>
+              Add Account
+            </Button>
+            <IconButton onClick={onClose} style={{ color: '#888' }}>
+              <CloseIcon />
+            </IconButton>
+          </div>
+        </DialogTitle>
+        <DialogContent style={{ padding: '0 24px 24px' }}>
+          {error && (
+            <div style={{
+              backgroundColor: '#fee2e2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+              padding: '16px',
+              borderRadius: '8px',
+              marginBottom: '16px'
+            }}>
+              {error}
+            </div>
+          )}
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
+              Loading accounts...
             </Box>
-          </Box>
-        ) : (
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Nickname</TableCell>
-                <TableCell>Vendor</TableCell>
-                <TableCell>Username/ID</TableCell>
-                <TableCell>Card Last Digits</TableCell>
-                <TableCell>Created At</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {accounts.map((account, index) => (
-                <StyledTableRow key={account.id}>
-                  <TableCell>{account.nickname}</TableCell>
-                  <TableCell>{account.vendor}</TableCell>
-                  <TableCell>{account.username || account.id_number}</TableCell>
-                  <TableCell>{account.card6_digits || '-'}</TableCell>
-                  <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell align="right">
-                    <IconButton 
-                      onClick={() => handleDelete(account.id)}
-                      sx={{ color: '#ef4444' }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </StyledTableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </DialogContent>
-    </Dialog>
+          ) : accounts.length === 0 && !isAdding ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
+              No saved accounts found
+            </Box>
+          ) : isAdding ? (
+            <Box sx={{ p: 2 }}>
+              <TextField
+                fullWidth
+                label="Account Nickname"
+                value={newAccount.nickname}
+                onChange={(e) => setNewAccount({ ...newAccount, nickname: e.target.value })}
+                margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                select
+                label="Vendor"
+                value={newAccount.vendor}
+                onChange={(e) => {
+                  const vendor = e.target.value;
+                  setNewAccount({
+                    ...newAccount,
+                    vendor,
+                    // Clear fields that are not used for the selected vendor
+                    username: vendor === 'visaCal' || vendor === 'max' ? newAccount.username : '',
+                    id_number: vendor === 'isracard' || vendor === 'amex' ? newAccount.id_number : '',
+                  });
+                }}
+                margin="normal"
+              >
+                <MenuItem value="isracard">Isracard</MenuItem>
+                <MenuItem value="amex">American Express</MenuItem>
+                <MenuItem value="visaCal">Visa Cal</MenuItem>
+                <MenuItem value="max">Max</MenuItem>
+              </TextField>
+              {(newAccount.vendor === 'visaCal' || newAccount.vendor === 'max') ? (
+                <TextField
+                  fullWidth
+                  label="Username"
+                  value={newAccount.username}
+                  onChange={(e) => setNewAccount({ ...newAccount, username: e.target.value })}
+                  margin="normal"
+                  required
+                />
+              ) : (
+                <TextField
+                  fullWidth
+                  label="ID Number"
+                  value={newAccount.id_number}
+                  onChange={(e) => setNewAccount({ ...newAccount, id_number: e.target.value })}
+                  margin="normal"
+                  required
+                />
+              )}
+              {(newAccount.vendor === 'isracard' || newAccount.vendor === 'amex') && (
+                <TextField
+                  fullWidth
+                  label="Card Last 6 Digits"
+                  value={newAccount.card6_digits}
+                  onChange={(e) => setNewAccount({ ...newAccount, card6_digits: e.target.value })}
+                  margin="normal"
+                />
+              )}
+              <TextField
+                fullWidth
+                label="Password"
+                type="password"
+                value={newAccount.password}
+                onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })}
+                margin="normal"
+                required
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                <Button onClick={() => setIsAdding(false)} sx={{ mr: 1 }}>
+                  Cancel
+                </Button>
+                <Button variant="contained" onClick={handleAdd}>
+                  Add
+                </Button>
+              </Box>
+            </Box>
+          ) : (
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Nickname</TableCell>
+                  <TableCell>Vendor</TableCell>
+                  <TableCell>Username/ID</TableCell>
+                  <TableCell>Card Last Digits</TableCell>
+                  <TableCell>Created At</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {accounts.map((account) => (
+                  <StyledTableRow key={account.id}>
+                    <TableCell>{account.nickname}</TableCell>
+                    <TableCell>{account.vendor}</TableCell>
+                    <TableCell>{account.username || account.id_number}</TableCell>
+                    <TableCell>{account.card6_digits || '-'}</TableCell>
+                    <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        onClick={() => handleScrape(account)}
+                        sx={{ 
+                          color: '#3b82f6',
+                          '&:hover': {
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          },
+                        }}
+                      >
+                        <SyncIcon />
+                      </IconButton>
+                      <IconButton 
+                        onClick={() => handleDelete(account.id)}
+                        sx={{ 
+                          color: '#ef4444',
+                          '&:hover': {
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          },
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </StyledTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
+      <ScrapeModal
+        isOpen={isScrapeModalOpen}
+        onClose={() => {
+          console.log('Closing ScrapeModal');
+          setIsScrapeModalOpen(false);
+          setSelectedAccount(null);
+        }}
+        onSuccess={handleScrapeSuccess}
+        initialConfig={selectedAccount ? {
+          options: {
+            companyId: selectedAccount.vendor,
+            startDate: new Date(),
+            combineInstallments: false,
+            showBrowser: false,
+            additionalTransactionInformation: true
+          },
+          credentials: {
+            id: selectedAccount.id_number || '',
+            card6Digits: selectedAccount.card6_digits || '',
+            password: selectedAccount.password || '',
+            username: selectedAccount.username || '',
+            nickname: selectedAccount.nickname || ''
+          }
+        } : undefined}
+      />
+    </>
   );
 } 

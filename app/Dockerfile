@@ -1,8 +1,8 @@
-FROM --platform=linux/amd64 node:20
+FROM --platform=linux/arm64 node:20-slim
 
 WORKDIR /app
 
-# Install dependencies required by Puppeteer
+# Install dependencies required by Chromium
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     fonts-liberation \
@@ -40,16 +40,39 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     wget \
     xdg-utils \
+    chromium \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
+
+# Add user so we don't need --no-sandbox in Puppeteer
+RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
+    && mkdir -p /home/pptruser/Downloads \
+    && chown -R pptruser:pptruser /home/pptruser
 
 COPY . .
 
-RUN npm install
+# Install dependencies and build as root
+RUN npm install && \
+    npm run build && \
+    chown -R pptruser:pptruser /app
 
-RUN npm run build
+# Create startup script
+RUN echo '#!/bin/sh\n\
+export DISPLAY=:99\n\
+Xvfb :99 -screen 0 1024x768x16 &\n\
+sleep 1\n\
+export CHROME_BIN=/usr/bin/chromium\n\
+export CHROME_PATH=/usr/lib/chromium/\n\
+export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true\n\
+export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium\n\
+export PUPPETEER_ARGS="--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu --headless --disable-software-rasterizer --disable-extensions --single-process"\n\
+exec npm start' > /app/start.sh && \
+    chmod +x /app/start.sh && \
+    chown pptruser:pptruser /app/start.sh
 
-RUN npx puppeteer browsers install chrome
+# Switch to non-root user
+USER pptruser
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["/app/start.sh"]

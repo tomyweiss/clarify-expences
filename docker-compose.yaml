@@ -35,9 +35,15 @@ services:
       - "3000:3000"
     depends_on:
       - clarify-db
-    command: "npm run start"
     networks:
       - clarify-network
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp=unconfined
+    shm_size: '2gb'
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
 
 volumes:
   db-data:

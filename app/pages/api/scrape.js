@@ -83,9 +83,11 @@ export default async function handler(req, res) {
       ...options,
       companyId,
       startDate: new Date(options.startDate),
-      showBrowser: options.showBrowser,
+      showBrowser: false,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
+
+    console.log('Scraping credentials:', scraperCredentials);
 
     const result = await scraper.scrape(scraperCredentials);
     console.log('Scraping result:');
