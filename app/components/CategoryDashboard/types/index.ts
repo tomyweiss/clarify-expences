@@ -8,6 +8,7 @@ export interface Expense {
   name: string;
   price: number;
   date: string;
+  category?: string;
 }
 
 export interface ExpensesModalProps {
@@ -15,12 +16,9 @@ export interface ExpensesModalProps {
   onClose: () => void;
   data: ModalData;
   color: string;
+  setModalData?: (data: ModalData) => void;
+  currentMonth?: string;
 } 
-
-export interface Income {
-  income_type: string;
-  amount: number;
-}
 
 export interface ModalData {
   type: string;

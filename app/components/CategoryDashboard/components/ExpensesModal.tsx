@@ -13,6 +13,7 @@ import { ExpensesModalProps, Expense } from '../types';
 import { formatNumber } from '../utils/format';
 import { LineChart } from '@mui/x-charts/LineChart';
 import Box from '@mui/material/Box';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 interface CategoryOverTimeData {
   year_month: string;
@@ -21,7 +22,7 @@ interface CategoryOverTimeData {
   year_sort?: string;
 }
 
-const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, color }) => {
+const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, color, setModalData, currentMonth }) => {
   const [timeSeriesData, setTimeSeriesData] = React.useState<CategoryOverTimeData[]>([]);
 
   React.useEffect(() => {
@@ -33,11 +34,15 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
             .then((data) => setTimeSeriesData(data))
             .catch((error) => console.error("Error fetching expense time series data:", error));
           break;
-        case "Income":
-          fetch(`/api/income_by_month?month=10&groupByYear=false`)
+        case "Credit Card Expenses":
+          fetch(`/api/expenses_by_month?month=10&groupByYear=false`)
             .then((response) => response.json())
             .then((data) => setTimeSeriesData(data))
-            .catch((error) => console.error("Error fetching income time series data:", error));
+            .catch((error) => console.error("Error fetching credit card expense time series data:", error));
+          break;
+        case "Bank Transactions":
+          // Don't fetch time series data for Bank Transactions - no graph needed
+          setTimeSeriesData([]);
           break;
         default:
           fetch(`/api/category_by_month?category=${data.type}&month=10&groupByYear=false`)
@@ -56,6 +61,46 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
     });
 
   const getAmounts = () => timeSeriesData.map((data) => data.amount);
+
+  const handleDeleteTransaction = async (expense: Expense) => {
+    try {
+      // For all transaction types, we need to find the transaction by name, date, and price
+      const response = await fetch(`/api/transactions/delete_transaction`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: expense.name,
+          date: expense.date,
+          price: expense.price,
+          category: data.type === "Bank Transactions" ? 'Bank' : (expense.category || data.type)
+        }),
+      });
+      
+      if (response.ok) {
+        // Remove the transaction from the local data
+        const updatedData = data.data.filter((item: Expense) => 
+          !(item.name === expense.name && 
+            item.date === expense.date && 
+            item.price === expense.price)
+        );
+        
+        // Update the modal data if setModalData is provided
+        setModalData?.({
+          ...data,
+          data: updatedData
+        });
+        
+        // Trigger a refresh of the dashboard data
+        window.dispatchEvent(new CustomEvent('dataRefresh'));
+      } else {
+        console.error('Failed to delete transaction');
+      }
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+    }
+  };
 
   return (
     <Dialog 
@@ -86,73 +131,76 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
         </IconButton>
       </DialogTitle>
       <DialogContent style={{ padding: '24px' }}>
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ width: '100%', overflow: 'hidden' }}>
-            <LineChart
-              xAxis={[
-                {
-                  data: getFormattedMonths(),
-                  valueFormatter: (value) => {
-                    return new Intl.DateTimeFormat("en-US", {
-                      year: "numeric",
-                      month: "short",
-                    }).format(value);
+        {data.type !== "Bank Transactions" && (
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ width: '100%', overflow: 'hidden' }}>
+              <LineChart
+                xAxis={[
+                  {
+                    data: getFormattedMonths(),
+                    valueFormatter: (value) => {
+                      return new Intl.DateTimeFormat("en-US", {
+                        year: "numeric",
+                        month: "short",
+                      }).format(value);
+                    },
+                    tickLabelStyle: { fill: '#666' },
+                    scaleType: 'time',
                   },
-                  tickLabelStyle: { fill: '#666' },
-                  scaleType: 'time',
-                },
-              ]}
-              yAxis={[
-                {
-                  tickLabelStyle: { fill: '#666' },
-                  valueFormatter: (value) => `₪${formatNumber(value)}`,
-                },
-              ]}
-              series={[
-                {
-                  data: getAmounts(),
-                  color: color,
-                  area: true,
-                  showMark: true,
-                  label: data.type,
-                },
-              ]}
-              height={300}
-              margin={{ left: 70 }}
-              grid={{ horizontal: true, vertical: false }}
-              sx={{
-                '.MuiLineElement-root': {
-                  stroke: color,
-                  strokeWidth: 2,
-                },
-                '.MuiAreaElement-root': {
-                  fill: color,
-                  opacity: 0.1,
-                },
-                '.MuiMarkElement-root': {
-                  stroke: color,
-                  strokeWidth: 2,
-                  fill: '#ffffff',
-                },
-                '.MuiChartsAxis-line': {
-                  stroke: '#e2e8f0',
-                },
-                '.MuiChartsAxis-tick': {
-                  stroke: '#e2e8f0',
-                },
-                '.MuiChartsGrid-root': {
-                  stroke: '#e2e8f0',
-                },
-              }}
-            />
+                ]}
+                yAxis={[
+                  {
+                    tickLabelStyle: { fill: '#666' },
+                    valueFormatter: (value) => `₪${formatNumber(value)}`,
+                  },
+                ]}
+                series={[
+                  {
+                    data: getAmounts(),
+                    color: color,
+                    area: true,
+                    showMark: true,
+                    label: data.type,
+                  },
+                ]}
+                height={300}
+                margin={{ left: 70 }}
+                grid={{ horizontal: true, vertical: false }}
+                sx={{
+                  '.MuiLineElement-root': {
+                    stroke: color,
+                    strokeWidth: 2,
+                  },
+                  '.MuiAreaElement-root': {
+                    fill: color,
+                    opacity: 0.1,
+                  },
+                  '.MuiMarkElement-root': {
+                    stroke: color,
+                    strokeWidth: 2,
+                    fill: '#ffffff',
+                  },
+                  '.MuiChartsAxis-line': {
+                    stroke: '#e2e8f0',
+                  },
+                  '.MuiChartsAxis-tick': {
+                    stroke: '#e2e8f0',
+                  },
+                  '.MuiChartsGrid-root': {
+                    stroke: '#e2e8f0',
+                  },
+                }}
+              />
+            </Box>
           </Box>
-        </Box>
+        )}
         <Table>
           <TableHead>
             <TableRow>
               <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Date</TableCell>
               <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0', width: '200px', maxWidth: '200px' }}>Description</TableCell>
               <TableCell align="right" style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Amount</TableCell>
+              <TableCell align="center" style={{ color: '#555', borderBottom: '1px solid #e2e8f0', width: '80px' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -164,11 +212,34 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                 <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
                   {expense.name}
                 </TableCell>
-                <TableCell align="right" style={{ color: color, borderBottom: '1px solid #e2e8f0' }}>
-                  ₪{formatNumber(Math.abs(expense.price))}
+                <TableCell align="right" style={{ 
+                  color: data.type === "Bank Transactions" 
+                    ? (expense.price >= 0 ? '#4ADE80' : '#F87171')
+                    : color, 
+                  borderBottom: '1px solid #e2e8f0',
+                  fontWeight: '600'
+                }}>
+                  {data.type === "Bank Transactions" 
+                    ? `${expense.price >= 0 ? '+' : ''}₪${formatNumber(Math.abs(expense.price))}`
+                    : `₪${formatNumber(Math.abs(expense.price))}`
+                  }
+                </TableCell>
+                <TableCell align="center" style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <IconButton
+                    onClick={() => handleDeleteTransaction(expense)}
+                    size="small"
+                    sx={{ 
+                      color: '#ef4444',
+                      '&:hover': {
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
                 </TableCell>
               </TableRow>
-            )) : <TableRow><TableCell colSpan={3} style={{ textAlign: 'center' }}>No data available</TableCell></TableRow>}
+            )) : <TableRow><TableCell colSpan={4} style={{ textAlign: 'center' }}>No data available</TableCell></TableRow>}
           </TableBody>
         </Table>
       </DialogContent>

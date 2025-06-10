@@ -20,6 +20,7 @@ const handler = createApiHandler({
             TO_CHAR(date, 'YYYY') AS year,
             DATE_TRUNC('year', date) AS year_sort
           FROM transactions
+          WHERE category != 'Bank'
           GROUP BY TO_CHAR(date, 'YYYY'), DATE_TRUNC('year', date)
           ORDER BY year_sort DESC
           LIMIT $1
@@ -37,6 +38,7 @@ const handler = createApiHandler({
           TO_CHAR(date, 'MM-YYYY') AS year_month,
           DATE_TRUNC('month', date) AS year_sort
         FROM transactions
+        WHERE category != 'Bank'
         GROUP BY 
           TO_CHAR(date, 'YYYY'),
           TO_CHAR(date, 'MM'),

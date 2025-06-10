@@ -3,9 +3,10 @@ import IconButton from '@mui/material/IconButton';
 import SortIcon from '@mui/icons-material/Sort';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import Button from '@mui/material/Button';
-import { ResponseData, Expense, Income, ModalData } from './types';
+import { ResponseData, Expense, ModalData } from './types';
 import { useCategoryIcons, useCategoryColors } from './utils/categoryUtils';
 import Card from './components/Card';
 import ExpensesModal from './components/ExpensesModal';
@@ -18,12 +19,12 @@ const CategoryDashboard: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = React.useState<string>("");
   const [uniqueYears, setUniqueYears] = React.useState<string[]>([]);
   const [uniqueMonths, setUniqueMonths] = React.useState<string[]>([]);
-  const [totalIncome, setTotalIncome] = React.useState(0);
-  const [totalExpenses, setTotalExpenses] = React.useState(0);
+  const [bankTransactions, setBankTransactions] = React.useState({ income: 0, expenses: 0 });
+  const [creditCardTransactions, setCreditCardTransactions] = React.useState(0);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isSorted, setIsSorted] = React.useState(true);
   const [loadingCategory, setLoadingCategory] = React.useState<string | null>(null);
-  const [loadingIncome, setLoadingIncome] = React.useState(false);
+  const [loadingBankTransactions, setLoadingBankTransactions] = React.useState(false);
   const [modalData, setModalData] = React.useState<ModalData>();
   const [showTransactionsTable, setShowTransactionsTable] = React.useState(false);
   const [transactions, setTransactions] = React.useState<any[]>([]);
@@ -32,14 +33,38 @@ const CategoryDashboard: React.FC = () => {
   const categoryColors = useCategoryColors();
   const [allAvailableDates, setAllAvailableDates] = React.useState<string[]>([]);
 
+  // Use refs to store current values for the event listener
+  const currentYearRef = React.useRef(selectedYear);
+  const currentMonthRef = React.useRef(selectedMonth);
+
+  // Update refs when values change
+  React.useEffect(() => {
+    currentYearRef.current = selectedYear;
+    currentMonthRef.current = selectedMonth;
+  }, [selectedYear, selectedMonth]);
+
+  const handleDataRefresh = React.useCallback(() => {
+    console.log('handleDataRefresh called with:', { 
+      selectedYear: currentYearRef.current, 
+      selectedMonth: currentMonthRef.current 
+    });
+    // Only refresh if we have valid year and month values
+    if (currentYearRef.current && currentMonthRef.current && 
+        currentYearRef.current !== '' && currentMonthRef.current !== '') {
+      console.log('Calling fetchData with:', `${currentYearRef.current}-${currentMonthRef.current}`);
+      // Use setTimeout to ensure fetchData is available
+      setTimeout(() => {
+        fetchData(`${currentYearRef.current}-${currentMonthRef.current}`);
+      }, 0);
+    } else {
+      console.log('Invalid year or month values, skipping refresh');
+    }
+  }, []);
+
   React.useEffect(() => {
     getAvailableMonths();
 
     // Add event listener for data refresh
-    const handleDataRefresh = () => {
-      getAvailableMonths();
-    };
-
     window.addEventListener('dataRefresh', handleDataRefresh);
 
     // Cleanup
@@ -136,44 +161,61 @@ const CategoryDashboard: React.FC = () => {
       const data = await response.json();
       setSumPerCategory(data);
       
-      // Calculate totals using the value field
-      const expenses = data.reduce((acc: number, curr: ResponseData) => 
-        acc + curr.value, 0);
+      // Fetch all transactions to calculate income and expenses properly
+      const allTransactionsURL = new URL("/api/category_expenses", window.location.origin);
+      const allTransactionsParams = new URLSearchParams();
+      allTransactionsParams.append("month", month);
+      allTransactionsParams.append("all", "true");
+      allTransactionsURL.search = allTransactionsParams.toString();
       
-      setTotalExpenses(expenses);
-      
-      // Fetch income data
-      const incomeURL = new URL("/api/income", window.location.origin);
-      const incomeParams = new URLSearchParams();
-      incomeParams.append("month", month);
-      incomeParams.append("groupByYear", "false");
-      incomeURL.search = incomeParams.toString();
-      
-      const incomeResponse = await fetch(incomeURL.toString(), {
+      const allTransactionsResponse = await fetch(allTransactionsURL.toString(), {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
       });
 
-      if (!incomeResponse.ok) {
-        throw new Error(`HTTP error! status: ${incomeResponse.status}`);
+      if (!allTransactionsResponse.ok) {
+        throw new Error(`HTTP error! status: ${allTransactionsResponse.status}`);
       }
+
+      const allTransactions = await allTransactionsResponse.json();
       
-      const incomeData = await incomeResponse.json();
+      // Calculate total income: Bank category with positive values
+      const totalIncome = allTransactions
+        .filter((transaction: any) => transaction.category === 'Bank' && transaction.price > 0)
+        .reduce((acc: number, transaction: any) => acc + transaction.price, 0);
       
-      let totalIncome = 0;
-      incomeData.forEach((income: Income) => {
-        totalIncome += income.amount;
+      // Calculate total expenses: All negative values
+      const totalExpenses = allTransactions
+        .filter((transaction: any) => transaction.price < 0)
+        .reduce((acc: number, transaction: any) => acc + Math.abs(transaction.price), 0);
+      
+      // Calculate credit card expenses: All transactions excluding Bank and Income categories
+      const creditCardTransactions = allTransactions.filter((transaction: any) => 
+        transaction.category !== 'Bank' && transaction.category !== 'Income'
+      );
+      
+      console.log('Credit card calculation debug:', {
+        allTransactionsCount: allTransactions.length,
+        creditCardTransactionsCount: creditCardTransactions.length,
+        creditCardTransactions: creditCardTransactions,
+        categories: creditCardTransactions.map((t: any) => ({ name: t.name, category: t.category, price: t.price }))
       });
       
-      setTotalIncome(totalIncome);
+      const creditCardExpenses = creditCardTransactions
+        .reduce((acc: number, transaction: any) => acc + Math.abs(transaction.price), 0);
+      
+      console.log('Credit card expenses total:', creditCardExpenses);
+      
+      setBankTransactions({ income: totalIncome, expenses: totalExpenses });
+      setCreditCardTransactions(creditCardExpenses);
     } catch (error) {
       console.error("Error fetching data:", error);
       // Reset states in case of error
       setSumPerCategory([]);
-      setTotalExpenses(0);
-      setTotalIncome(0);
+      setBankTransactions({ income: 0, expenses: 0 });
+      setCreditCardTransactions(0);
     }
   };
   
@@ -186,46 +228,97 @@ const CategoryDashboard: React.FC = () => {
     };
   }).sort((a, b) => isSorted ? Math.abs(b.value) - Math.abs(a.value) : 0);
 
-  const handleTotalIncomeClick = async () => {
-      setLoadingIncome(true);
-      try {
-        const url = new URL("/api/income", window.location.origin);
-        const params = new URLSearchParams();
-        params.append("month", `${selectedYear}-${selectedMonth}`);
-        url.search = params.toString();
-        
-        const response = await fetch(url.toString(), {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+  const handleBankTransactionsClick = async () => {
+    setLoadingBankTransactions(true);
+    try {
+      const url = new URL("/api/category_expenses", window.location.origin);
+      const params = new URLSearchParams();
+      const fullMonth = `${selectedYear}-${selectedMonth}`;
+      params.append("month", fullMonth);
+      params.append("all", "true");
+      url.search = params.toString();
+      
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-        const incomeData = await response.json();
-        
-        let totalIncome = 0;
-        let data: Expense[] = [];
-        incomeData.forEach((income: Income) => {
-          totalIncome += income.amount;
-          data.push({
-            name: income.income_type,
-            price: income.amount,
-            date: `${selectedYear}-${selectedMonth}`,
-          });
-        });
-        
-        setTotalIncome(totalIncome);
-        setModalData({
-          type: "Income",
-          data: data,
-        });
-        setIsModalOpen(true);
-      } catch (error) {
-        console.error("Error fetching income data:", error);
-      } finally {
-        setLoadingIncome(false);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    
+
+      const allTransactions = await response.json();
+      
+      // Filter for Bank category transactions (both positive and negative)
+      const bankTransactions = allTransactions.filter((transaction: any) => 
+        transaction.category === 'Bank'
+      );
+      
+      // Format the data correctly
+      setModalData({
+        type: "Bank Transactions",
+        data: bankTransactions.map((transaction: any) => ({
+          name: transaction.name,
+          price: transaction.price,
+          date: transaction.date
+        }))
+      });
+      
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching bank transactions data:", error);
+    } finally {
+      setLoadingBankTransactions(false);
+    }
+  };
+
+  const handleTotalCreditCardExpensesClick = async () => {
+    try {
+      setLoadingBankTransactions(true);
+      const url = new URL("/api/category_expenses", window.location.origin);
+      const params = new URLSearchParams();
+      const fullMonth = `${selectedYear}-${selectedMonth}`;
+      params.append("month", fullMonth);
+      params.append("all", "true");
+      url.search = params.toString();
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const allExpensesData = await response.json();
+      
+      // Filter out 'Bank' and 'Income' category transactions to get credit card expenses
+      const creditCardData = allExpensesData.filter((transaction: any) => 
+        transaction.category !== 'Bank' && transaction.category !== 'Income'
+      );
+      
+      // Format the data correctly
+      setModalData({
+        type: "Credit Card Expenses",
+        data: creditCardData.map((transaction: any) => ({
+          name: transaction.name,
+          price: transaction.price,
+          date: transaction.date,
+          category: transaction.category
+        }))
+      });
+
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching credit card expenses data:", error);
+    } finally {
+      setLoadingBankTransactions(false);
+    }
   };
 
   const handleCategoryClick = async (category: string) => {
@@ -257,35 +350,6 @@ const CategoryDashboard: React.FC = () => {
       console.error("Error fetching category expenses:", error);
     } finally {
       setLoadingCategory(null);
-    }
-  };
-
-  const handleTotalExpensesClick = async () => {
-    try {
-      // Fetch latest expense data for the current month and year
-      const url = new URL("/api/category_expenses", window.location.origin);
-      const params = new URLSearchParams();
-      const fullMonth = `${selectedYear}-${selectedMonth}`;
-      params.append("month", fullMonth);
-      params.append("all", "true");
-      url.search = params.toString();
-
-      const response = await fetch(url.toString());
-      const expensesData = await response.json();
-      
-      // Format the data correctly
-      setModalData({
-        type: "Total Expenses",
-        data: expensesData.map((expense: any) => ({
-          name: expense.description || "Expense",
-          price: expense.price,
-          date: expense.date
-        }))
-      });
-
-      setIsModalOpen(true);
-    } catch (error) {
-      console.error("Error fetching total expenses data:", error);
     }
   };
 
@@ -467,20 +531,23 @@ const CategoryDashboard: React.FC = () => {
         marginBottom: '24px'
       }}>
         <Card
-          title="Total Income" 
-          value={totalIncome}
+          title="Bank Transactions" 
+          value={bankTransactions.income}
           color="#4ADE80"
           icon={MonetizationOnIcon}
-          onClick={handleTotalIncomeClick}
-          isLoading={loadingIncome}
+          onClick={handleBankTransactionsClick}
+          isLoading={loadingBankTransactions}
           size="large"
+          secondaryValue={bankTransactions.expenses}
+          secondaryColor="#F87171"
         />
         <Card 
-          title="Total Expenses" 
-          value={totalExpenses} 
-          color="#F87171"
-          icon={ShoppingCartIcon}
-          onClick={handleTotalExpensesClick}
+          title="Credit Card Transactions" 
+          value={creditCardTransactions} 
+          color="#8B5CF6"
+          icon={CreditCardIcon}
+          onClick={handleTotalCreditCardExpensesClick}
+          isLoading={loadingBankTransactions}
           size="large"
         />
       </div>
@@ -502,18 +569,30 @@ const CategoryDashboard: React.FC = () => {
           maxWidth: '1360px',
           boxSizing: 'border-box'
         }}>
-          {categories.map((category, index) => (
-            <Card
-              key={"category-" + index}
-              title={category.name}
-              value={category.value}
-              color={category.color}
-              icon={category.icon}
-              onClick={() => handleCategoryClick(category.name)}
-              isLoading={loadingCategory === category.name}
-              size="medium"
-            />
-          ))}
+          {categories.length > 0 ? (
+            categories.map((category, index) => (
+              <Card
+                key={"category-" + index}
+                title={category.name}
+                value={category.value}
+                color={category.color}
+                icon={category.icon}
+                onClick={() => handleCategoryClick(category.name)}
+                isLoading={loadingCategory === category.name}
+                size="medium"
+              />
+            ))
+          ) : (
+            <div style={{
+              gridColumn: '1 / -1',
+              textAlign: 'center',
+              padding: '48px',
+              color: '#666',
+              fontSize: '16px'
+            }}>
+              No transactions found for {new Date(`2024-${selectedMonth}-01`).toLocaleDateString('default', { month: 'long' })} {selectedYear}
+            </div>
+          )}
         </div>
       )}
 
@@ -523,6 +602,8 @@ const CategoryDashboard: React.FC = () => {
           onClose={() => setIsModalOpen(false)}
           data={modalData}
           color={categoryColors[modalData?.type] || '#94a3b8'}
+          setModalData={setModalData}
+          currentMonth={`${selectedYear}-${selectedMonth}`}
         />
       )}
     </div>

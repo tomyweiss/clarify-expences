@@ -12,6 +12,9 @@ interface CardProps {
   isLoading?: boolean;
   size?: 'large' | 'medium';
   clickable?: boolean;
+  secondaryValue?: number;
+  secondaryColor?: string;
+  secondaryLabel?: string;
 }
 
 const Card: React.FC<CardProps> = ({ 
@@ -21,11 +24,15 @@ const Card: React.FC<CardProps> = ({
   icon: Icon, 
   onClick, 
   isLoading = false,
-  size = 'medium'
+  size = 'medium',
+  secondaryValue,
+  secondaryColor,
+  secondaryLabel
 }) => {
   const padding = size === 'large' ? '32px' : '20px';
   const titleSize = size === 'large' ? '16px' : '20px';
   const valueSize = size === 'large' ? '36px' : '24px';
+  const secondaryValueSize = size === 'large' ? '20px' : '16px';
   const iconSize = size === 'large' ? '24px' : '24px';
   const iconPadding = size === 'large' ? '10px' : '12px';
   const iconBorderRadius = size === 'large' ? '12px' : '16px';
@@ -101,15 +108,39 @@ const Card: React.FC<CardProps> = ({
             letterSpacing: size === 'large' ? 'normal' : '-0.01em',
             fontFamily: 'Assistant, sans-serif'
           }}>{title}</h3>
-          <span style={{ 
-            fontSize: valueSize, 
-            fontWeight: size === 'large' ? '700' : '600', 
-            color: color,
-            letterSpacing: '-0.02em',
-            fontFamily: 'Assistant, sans-serif'
-          }}>
-            ₪{formatNumber(value || 0)}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
+            <span style={{ 
+              fontSize: valueSize, 
+              fontWeight: size === 'large' ? '700' : '600', 
+              color: color,
+              letterSpacing: '-0.02em',
+              fontFamily: 'Assistant, sans-serif'
+            }}>
+              ₪{formatNumber(value || 0)}
+            </span>
+            {secondaryValue !== undefined && (
+              <>
+                <span style={{ 
+                  fontSize: valueSize, 
+                  fontWeight: size === 'large' ? '700' : '600', 
+                  color: '#E5E7EB',
+                  letterSpacing: '-0.02em',
+                  fontFamily: 'Assistant, sans-serif'
+                }}>
+                  |
+                </span>
+                <span style={{ 
+                  fontSize: valueSize, 
+                  fontWeight: size === 'large' ? '700' : '600', 
+                  color: secondaryColor || '#666',
+                  letterSpacing: '-0.02em',
+                  fontFamily: 'Assistant, sans-serif'
+                }}>
+                  {secondaryLabel && `${secondaryLabel}: `}₪{formatNumber(secondaryValue)}
+                </span>
+              </>
+            )}
+          </div>
         </div>
         <div style={{
           backgroundColor: color + '20',
