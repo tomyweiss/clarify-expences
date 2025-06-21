@@ -1,15 +1,23 @@
 import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
 import crypto from 'crypto';
 import { getDB } from './db';
-import { get } from 'https';
+import { BANK_VENDORS } from '../../utils/constants';
 
-async function insertTransaction(txn, client, companyId) {
+async function insertTransaction(txn, client, companyId, isBank) {
   if (!txn.identifier || txn.identifier === ""){
     const hash = crypto.createHash('sha1');
     hash.update(txn.processed_date + companyId);
     txn.identifier = hash.digest('hex');
   }
-  
+
+  let amount = txn.chargedAmount;
+  let category = txn.category;
+  if (!isBank){
+    amount = txn.chargedAmount * -1;
+  }else{
+    category = "Bank";
+  }
+
   try {
     await client.query(
       `INSERT INTO transactions (
@@ -35,8 +43,8 @@ async function insertTransaction(txn, client, companyId) {
         companyId,
         new Date(txn.date),
         txn.description,
-        txn.chargedAmount * -1,
-        txn.category || 'N/A',
+        amount,
+        category || 'N/A',
         txn.type,
         txn.processedDate,
         txn.originalAmount,
@@ -67,11 +75,22 @@ export default async function handler(req, res) {
       throw new Error('Invalid company ID');
     }
 
+    let isBank = false;
+    if (BANK_VENDORS.includes(options.companyId)){
+      isBank = true;
+    }
+
     // Prepare credentials based on company type
     const scraperCredentials = options.companyId === 'visaCal' || options.companyId === 'max'
       ? {
           username: credentials.username,
           password: credentials.password
+        }
+      : BANK_VENDORS.includes(options.companyId)
+      ? {
+          username: credentials.username,
+          password: credentials.password,
+          bankAccountNumber: credentials.bankAccountNumber || undefined
         }
       : {
           id: credentials.id,
@@ -83,11 +102,9 @@ export default async function handler(req, res) {
       ...options,
       companyId,
       startDate: new Date(options.startDate),
-      showBrowser: false,
+      showBrowser: isBank,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
-
-    console.log('Scraping credentials:', scraperCredentials);
 
     const result = await scraper.scrape(scraperCredentials);
     console.log('Scraping result:');
@@ -95,13 +112,10 @@ export default async function handler(req, res) {
     if (!result.success) {
       throw new Error(result.errorType || 'Scraping failed');
     }
-
-    // Insert transactions into the database
-    if (result.accounts) {
-      for (const account of result.accounts) {
-        for (const txn of account.txns) {
-          await insertTransaction(txn, client, options.companyId);
-        }
+    
+    for (const account of result.accounts) {
+      for (const txn of account.txns) {
+        await insertTransaction(txn, client, options.companyId, isBank);
       }
     }
 

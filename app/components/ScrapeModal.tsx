@@ -26,6 +26,7 @@ interface ScraperConfig {
     card6Digits?: string;
     password?: string;
     username?: string;
+    bankAccountNumber?: string;
     nickname?: string;
   };
 }
@@ -45,7 +46,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       companyId: 'isracard',
       startDate: new Date(),
       combineInstallments: false,
-      showBrowser: false,
+      showBrowser: true,
       additionalTransactionInformation: true
     },
     credentials: {
@@ -53,7 +54,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       card6Digits: '',
       password: '',
       username: '',
-      nickname: ''
+      nickname: '',
+      bankAccountNumber: ''
     }
   };
   const [config, setConfig] = useState<ScraperConfig>(initialConfig || defaultConfig);
@@ -66,11 +68,11 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
 
   useEffect(() => {
     if (!isOpen) {
-      setConfig(defaultConfig);
+      setConfig(initialConfig || defaultConfig);
       setError(null);
       setIsLoading(false);
     }
-  }, [isOpen]);
+  }, [isOpen, initialConfig]);
 
   const handleConfigChange = (field: string, value: any) => {
     if (field.includes('.')) {
@@ -93,7 +95,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
   const handleScrape = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/scrape', {
         method: 'POST',
@@ -193,6 +195,38 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           shrink: true,
         }}
       />
+      {config.credentials.username && (
+        <TextField
+          label="Username"
+          value={config.credentials.username}
+          disabled
+          fullWidth
+        />
+      )}
+      {config.credentials.id && (
+        <TextField
+          label="ID"
+          value={config.credentials.id}
+          disabled
+          fullWidth
+        />
+      )}
+      {config.credentials.card6Digits && (
+        <TextField
+          label="Card 6 Digits"
+          value={config.credentials.card6Digits}
+          disabled
+          fullWidth
+        />
+      )}
+      {config.credentials.bankAccountNumber && (
+        <TextField
+          label="Bank Account Number"
+          value={config.credentials.bankAccountNumber}
+          disabled
+          fullWidth
+        />
+      )}
     </>
   );
 
@@ -218,7 +252,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         padding: '24px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span>Scrape Transactions</span>
+          <span>Expenses</span>
         </div>
         <IconButton onClick={onClose} style={{ color: '#888' }}>
           <CloseIcon />
@@ -259,7 +293,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
             fontWeight: 500
           }}
         >
-          {isLoading ? 'Scraping...' : 'Scrape'}
+          {isLoading ? 'SCRAPING...' : 'SCRAPE'}
         </Button>
       </DialogActions>
     </Dialog>

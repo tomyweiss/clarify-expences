@@ -32,9 +32,21 @@ const NewIncomeModal: React.FC<NewIncomeModalProps> = ({ open, onClose, onSave }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Add New Income</DialogTitle>
+      <DialogTitle>Add Manual Income</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <div style={{
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '8px',
+            color: '#0369a1',
+            fontSize: '14px',
+            lineHeight: '1.4'
+          }}>
+            💡 This component allows you to manually add income transactions that will be stored in the transactions table and appear in your Bank Transactions widget.
+          </div>
           <TextField
             label="Income Name"
             value={incomeName}
@@ -82,21 +94,13 @@ const NewIncomeModal: React.FC<NewIncomeModalProps> = ({ open, onClose, onSave }
         >
           Cancel
         </Button>
-        <Button 
+        <Button
+          variant="contained"
           onClick={handleSubmit}
           sx={{
-            color: '#fff',
-            backgroundColor: '#4ADE80',
-            borderRadius: '12px',
-            padding: '8px 16px',
-            transition: 'all 0.2s ease-in-out',
+            backgroundColor: '#3b82f6',
             '&:hover': {
-              backgroundColor: '#3acd70',
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(74, 222, 128, 0.2)',
-            },
-            '&:active': {
-              transform: 'translateY(0)',
+              backgroundColor: '#2563eb',
             },
           }}
         >

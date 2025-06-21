@@ -20,7 +20,7 @@ const handler = createApiHandler({
             identifier,
             vendor
           FROM transactions 
-          WHERE TO_CHAR(date, 'YYYY-MM') = $1 
+          WHERE TO_CHAR(date, 'YYYY-MM') = $1
           ORDER BY date DESC
         `,
         params: [month]

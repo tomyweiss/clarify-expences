@@ -9,7 +9,7 @@ import Button from "@mui/material/Button";
 import { styled } from "@mui/material/styles";
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import SyncIcon from '@mui/icons-material/Sync';
-import AddIcon from '@mui/icons-material/Add';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PersonIcon from '@mui/icons-material/Person';
 import ScrapeModal from './ScrapeModal';
 import NewIncomeModal from './NewIncomeModal';
@@ -105,13 +105,13 @@ function ResponsiveAppBar() {
     try {
       const formattedDate = date.toISOString().split('T')[0];
       
-      const response = await fetch("/api/income", {
+      const response = await fetch("/api/income_transaction", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          income_type: incomeName,
+          name: incomeName,
           amount: amount,
           date: formattedDate
         }),
@@ -119,8 +119,8 @@ function ResponsiveAppBar() {
 
       if (response.ok) {
         setIsNewIncomeModalOpen(false);
-        // Refresh the page to show the new income
-        window.location.reload();
+        // Dispatch a custom event to trigger data refresh
+        window.dispatchEvent(new CustomEvent('dataRefresh'));
       } else {
         console.error("Failed to add new income");
       }
@@ -171,15 +171,9 @@ function ResponsiveAppBar() {
               <DatabaseIndicator />
               <NavButton
                 onClick={() => setIsNewIncomeModalOpen(true)}
-                startIcon={<AddIcon />}
+                startIcon={<TrendingUpIcon />}
               >
-                New Income
-              </NavButton>
-              <NavButton
-                onClick={() => setIsScrapeModalOpen(true)}
-                startIcon={<SyncIcon />}
-              >
-                Scrape
+                Income
               </NavButton>
               <NavButton
                 onClick={() => setIsAccountsModalOpen(true)}

@@ -20,6 +20,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SyncIcon from '@mui/icons-material/Sync';
 import ScrapeModal from './ScrapeModal';
+import { CREDIT_CARD_VENDORS, BANK_VENDORS } from '../utils/constants';
 
 interface Account {
   id: number;
@@ -27,6 +28,7 @@ interface Account {
   username?: string;
   id_number?: string;
   card6_digits?: string;
+  bank_account_number?: string;
   nickname?: string;
   password?: string;
   created_at: string;
@@ -55,6 +57,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
     username: '',
     id_number: '',
     card6_digits: '',
+    bank_account_number: '',
     password: '',
     nickname: '',
     id: 0,
@@ -104,6 +107,15 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
         setError('Username is not used for Isracard and American Express');
         return;
       }
+    } else if (BANK_VENDORS.includes(newAccount.vendor)) {
+      if (!newAccount.username) {
+        setError('Username is required for bank accounts');
+        return;
+      }
+      if (!newAccount.bank_account_number) {
+        setError('Bank account number is required for bank accounts');
+        return;
+      }
     }
 
     if (!newAccount.password) {
@@ -131,6 +143,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
           username: '',
           id_number: '',
           card6_digits: '',
+          bank_account_number: '',
           password: '',
           nickname: '',
           id: 0,
@@ -162,6 +175,23 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
 
   const handleScrape = (account: Account) => {
     console.log('Selected account for scraping:', account);
+    const initialConfig = {
+      options: {
+        companyId: account.vendor,
+        startDate: new Date(),
+        combineInstallments: false,
+        showBrowser: true,
+        additionalTransactionInformation: true
+      },
+      credentials: {
+        id: account.id_number,
+        card6Digits: account.card6_digits,
+        password: account.password,
+        username: account.username,
+        bankAccountNumber: account.bank_account_number,
+        nickname: account.nickname
+      }
+    };
     setSelectedAccount(account);
     setIsScrapeModalOpen(true);
   };
@@ -178,7 +208,18 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
 
   return (
     <>
-      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+      <Dialog 
+        open={isOpen} 
+        onClose={() => {
+          if (isAdding) {
+            setIsAdding(false);
+          } else {
+            onClose();
+          }
+        }} 
+        maxWidth="md" 
+        fullWidth
+      >
         <DialogTitle style={{ 
           color: '#333',
           display: 'flex',
@@ -203,7 +244,13 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             >
               Add Account
             </Button>
-            <IconButton onClick={onClose} style={{ color: '#888' }}>
+            <IconButton onClick={() => {
+              if (isAdding) {
+                setIsAdding(false);
+              } else {
+                onClose();
+              }
+            }} style={{ color: '#888' }}>
               <CloseIcon />
             </IconButton>
           </div>
@@ -250,8 +297,9 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
                     ...newAccount,
                     vendor,
                     // Clear fields that are not used for the selected vendor
-                    username: vendor === 'visaCal' || vendor === 'max' ? newAccount.username : '',
+                    username: vendor === 'visaCal' || vendor === 'max' || BANK_VENDORS.includes(vendor) ? newAccount.username : '',
                     id_number: vendor === 'isracard' || vendor === 'amex' ? newAccount.id_number : '',
+                    bank_account_number: BANK_VENDORS.includes(vendor) ? newAccount.bank_account_number : '',
                   });
                 }}
                 margin="normal"
@@ -260,8 +308,17 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
                 <MenuItem value="amex">American Express</MenuItem>
                 <MenuItem value="visaCal">Visa Cal</MenuItem>
                 <MenuItem value="max">Max</MenuItem>
+                <MenuItem value="hapoalim">Bank Hapoalim</MenuItem>
+                <MenuItem value="leumi">Bank Leumi</MenuItem>
+                <MenuItem value="mizrahi">Mizrahi Tefahot</MenuItem>
+                <MenuItem value="discount">Discount Bank</MenuItem>
+                <MenuItem value="otsarHahayal">Otsar Hahayal</MenuItem>
+                <MenuItem value="beinleumi">Beinleumi</MenuItem>
+                <MenuItem value="massad">Massad</MenuItem>
+                <MenuItem value="yahav">Yahav</MenuItem>
+                <MenuItem value="union">Union Bank</MenuItem>
               </TextField>
-              {(newAccount.vendor === 'visaCal' || newAccount.vendor === 'max') ? (
+              {(newAccount.vendor === 'visaCal' || newAccount.vendor === 'max' || BANK_VENDORS.includes(newAccount.vendor)) ? (
                 <TextField
                   fullWidth
                   label="Username"
@@ -276,6 +333,16 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
                   label="ID Number"
                   value={newAccount.id_number}
                   onChange={(e) => setNewAccount({ ...newAccount, id_number: e.target.value })}
+                  margin="normal"
+                  required
+                />
+              )}
+              {BANK_VENDORS.includes(newAccount.vendor) && (
+                <TextField
+                  fullWidth
+                  label="Bank Account Number"
+                  value={newAccount.bank_account_number}
+                  onChange={(e) => {debugger; setNewAccount({ ...newAccount, bank_account_number: e.target.value })}}
                   margin="normal"
                   required
                 />
@@ -361,7 +428,6 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
       <ScrapeModal
         isOpen={isScrapeModalOpen}
         onClose={() => {
-          console.log('Closing ScrapeModal');
           setIsScrapeModalOpen(false);
           setSelectedAccount(null);
         }}
@@ -371,18 +437,19 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             companyId: selectedAccount.vendor,
             startDate: new Date(),
             combineInstallments: false,
-            showBrowser: false,
+            showBrowser: true,
             additionalTransactionInformation: true
           },
           credentials: {
-            id: selectedAccount.id_number || '',
-            card6Digits: selectedAccount.card6_digits || '',
-            password: selectedAccount.password || '',
-            username: selectedAccount.username || '',
-            nickname: selectedAccount.nickname || ''
+            id: selectedAccount.id_number,
+            card6Digits: selectedAccount.card6_digits,
+            password: selectedAccount.password,
+            username: selectedAccount.username,
+            bankAccountNumber: selectedAccount.bank_account_number,
+            nickname: selectedAccount.nickname
           }
         } : undefined}
       />
     </>
   );
-} 
+}
