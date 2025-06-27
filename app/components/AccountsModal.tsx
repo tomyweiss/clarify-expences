@@ -14,11 +14,15 @@ import {
   TextField,
   MenuItem,
   styled,
+  Typography,
+  Divider,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SyncIcon from '@mui/icons-material/Sync';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 import ScrapeModal from './ScrapeModal';
 import { CREDIT_CARD_VENDORS, BANK_VENDORS } from '../utils/constants';
 
@@ -42,6 +46,26 @@ interface AccountsModalProps {
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:nth-of-type(odd)': {
     backgroundColor: theme.palette.action.hover,
+  },
+}));
+
+const SectionHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '16px 0',
+  marginBottom: '16px',
+  borderBottom: '2px solid #e2e8f0',
+  '& .MuiTypography-root': {
+    fontWeight: 600,
+    fontSize: '18px',
+  },
+}));
+
+const AccountSection = styled(Box)(({ theme }) => ({
+  marginBottom: '32px',
+  '&:last-child': {
+    marginBottom: 0,
   },
 }));
 
@@ -206,6 +230,80 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
     }
   }, [selectedAccount]);
 
+  // Separate accounts by type
+  const bankAccounts = accounts.filter(account => BANK_VENDORS.includes(account.vendor));
+  const creditAccounts = accounts.filter(account => CREDIT_CARD_VENDORS.includes(account.vendor));
+
+  const renderAccountTable = (accounts: Account[], type: 'bank' | 'credit') => {
+    if (accounts.length === 0) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          padding: '32px',
+          color: '#666',
+          fontStyle: 'italic'
+        }}>
+          No {type === 'bank' ? 'bank' : 'credit card'} accounts found
+        </Box>
+      );
+    }
+
+    return (
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Nickname</TableCell>
+            <TableCell>Vendor</TableCell>
+            <TableCell>{type === 'bank' ? 'Username' : 'ID Number'}</TableCell>
+            {type === 'bank' ? (
+              <TableCell>Account Number</TableCell>
+            ) : (
+              <TableCell>Card Last Digits</TableCell>
+            )}
+            <TableCell>Created At</TableCell>
+            <TableCell align="right">Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {accounts.map((account) => (
+            <StyledTableRow key={account.id}>
+              <TableCell>{account.nickname}</TableCell>
+              <TableCell>{account.vendor}</TableCell>
+              <TableCell>{account.username || account.id_number}</TableCell>
+              <TableCell>{type === 'bank' ? account.bank_account_number : (account.card6_digits || '-')}</TableCell>
+              <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
+              <TableCell align="right">
+                <IconButton
+                  onClick={() => handleScrape(account)}
+                  sx={{ 
+                    color: '#3b82f6',
+                    '&:hover': {
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    },
+                  }}
+                >
+                  <SyncIcon />
+                </IconButton>
+                <IconButton 
+                  onClick={() => handleDelete(account.id)}
+                  sx={{ 
+                    color: '#ef4444',
+                    '&:hover': {
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    },
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </TableCell>
+            </StyledTableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  };
+
   return (
     <>
       <Dialog 
@@ -217,7 +315,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             onClose();
           }
         }} 
-        maxWidth="md" 
+        maxWidth="lg" 
         fullWidth
       >
         <DialogTitle style={{ 
@@ -228,7 +326,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
           padding: '24px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span>Accounts</span>
+            <span>Accounts Management</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Button
@@ -375,53 +473,29 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
               </Box>
             </Box>
           ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nickname</TableCell>
-                  <TableCell>Vendor</TableCell>
-                  <TableCell>Username/ID</TableCell>
-                  <TableCell>Card Last Digits</TableCell>
-                  <TableCell>Created At</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {accounts.map((account) => (
-                  <StyledTableRow key={account.id}>
-                    <TableCell>{account.nickname}</TableCell>
-                    <TableCell>{account.vendor}</TableCell>
-                    <TableCell>{account.username || account.id_number}</TableCell>
-                    <TableCell>{account.card6_digits || '-'}</TableCell>
-                    <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        onClick={() => handleScrape(account)}
-                        sx={{ 
-                          color: '#3b82f6',
-                          '&:hover': {
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                          },
-                        }}
-                      >
-                        <SyncIcon />
-                      </IconButton>
-                      <IconButton 
-                        onClick={() => handleDelete(account.id)}
-                        sx={{ 
-                          color: '#ef4444',
-                          '&:hover': {
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                          },
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </StyledTableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Box>
+              {/* Bank Accounts Section */}
+              <AccountSection>
+                <SectionHeader>
+                  <AccountBalanceIcon sx={{ color: '#3b82f6', fontSize: '24px' }} />
+                  <Typography variant="h6" color="primary">
+                    Bank Accounts ({bankAccounts.length})
+                  </Typography>
+                </SectionHeader>
+                {renderAccountTable(bankAccounts, 'bank')}
+              </AccountSection>
+
+              {/* Credit Card Accounts Section */}
+              <AccountSection>
+                <SectionHeader>
+                  <CreditCardIcon sx={{ color: '#8b5cf6', fontSize: '24px' }} />
+                  <Typography variant="h6" sx={{ color: '#8b5cf6' }}>
+                    Credit Card Accounts ({creditAccounts.length})
+                  </Typography>
+                </SectionHeader>
+                {renderAccountTable(creditAccounts, 'credit')}
+              </AccountSection>
+            </Box>
           )}
         </DialogContent>
       </Dialog>

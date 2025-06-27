@@ -1,0 +1,699 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Box,
+  Typography,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Checkbox,
+  TextField,
+  IconButton,
+  Divider,
+  Alert,
+  CircularProgress,
+  Tabs,
+  Tab,
+  Switch,
+  FormControlLabel,
+  Card,
+  CardContent,
+  Grid
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import MergeIcon from '@mui/icons-material/Merge';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { useCategoryColors } from '../utils/categoryUtils';
+
+interface Category {
+  name: string;
+  count: number;
+}
+
+interface CategorizationRule {
+  id: number;
+  name_pattern: string;
+  target_category: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CategoryManagementModalProps {
+  open: boolean;
+  onClose: () => void;
+  onCategoriesUpdated: () => void;
+}
+
+const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
+  open,
+  onClose,
+  onCategoriesUpdated
+}) => {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState(0);
+  const [rules, setRules] = useState<CategorizationRule[]>([]);
+  const [isLoadingRules, setIsLoadingRules] = useState(false);
+  const [editingRule, setEditingRule] = useState<CategorizationRule | null>(null);
+  const [newRule, setNewRule] = useState({ name_pattern: '', target_category: '' });
+  const [isApplyingRules, setIsApplyingRules] = useState(false);
+  const categoryColors = useCategoryColors();
+
+  useEffect(() => {
+    if (open) {
+      fetchCategories();
+      fetchRules();
+    }
+  }, [open]);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/get_all_categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      
+      const categoryNames = await response.json();
+      
+      // Get transaction counts for each category
+      const categoriesWithCounts = await Promise.all(
+        categoryNames.map(async (name: string) => {
+          const countResponse = await fetch(`/api/category_expenses?month=all&category=${encodeURIComponent(name)}`);
+          const transactions = await countResponse.json();
+          return {
+            name,
+            count: Array.isArray(transactions) ? transactions.length : 0
+          };
+        })
+      );
+      
+      setCategories(categoriesWithCounts.sort((a, b) => b.count - a.count));
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setError('Failed to load categories');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchRules = async () => {
+    try {
+      setIsLoadingRules(true);
+      const response = await fetch('/api/categorization_rules');
+      if (!response.ok) throw new Error('Failed to fetch rules');
+      
+      const rulesData = await response.json();
+      setRules(rulesData);
+    } catch (error) {
+      console.error('Error fetching rules:', error);
+      setError('Failed to load rules');
+    } finally {
+      setIsLoadingRules(false);
+    }
+  };
+
+  const handleCategoryToggle = (categoryName: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryName)
+        ? prev.filter(name => name !== categoryName)
+        : [...prev, categoryName]
+    );
+  };
+
+  const handleMerge = async () => {
+    if (selectedCategories.length < 2) {
+      setError('Please select at least 2 categories to merge');
+      return;
+    }
+
+    if (!newCategoryName.trim()) {
+      setError('Please enter a name for the new merged category');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Call the merge API
+      const response = await fetch('/api/merge_categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sourceCategories: selectedCategories,
+          newCategoryName: newCategoryName.trim()
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to merge categories');
+      }
+
+      setSuccess(`Successfully merged ${selectedCategories.length} categories into "${newCategoryName}"`);
+      setSelectedCategories([]);
+      setNewCategoryName('');
+      
+      // Refresh categories list
+      await fetchCategories();
+      
+      // Notify parent component
+      onCategoriesUpdated();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error merging categories:', error);
+      setError(error instanceof Error ? error.message : 'Failed to merge categories');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setSelectedCategories([]);
+    setNewCategoryName('');
+    setError(null);
+    setSuccess(null);
+    setCurrentTab(0);
+    setEditingRule(null);
+    setNewRule({ name_pattern: '', target_category: '' });
+    onClose();
+  };
+
+  const handleCreateRule = async () => {
+    if (!newRule.name_pattern.trim() || !newRule.target_category.trim()) {
+      setError('Please enter both pattern and category');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/categorization_rules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newRule),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create rule');
+      }
+
+      setSuccess('Rule created successfully');
+      setNewRule({ name_pattern: '', target_category: '' });
+      await fetchRules();
+      
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error creating rule:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create rule');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateRule = async (rule: CategorizationRule) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/categorization_rules', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(rule),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update rule');
+      }
+
+      setSuccess('Rule updated successfully');
+      setEditingRule(null);
+      await fetchRules();
+      
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error updating rule:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update rule');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteRule = async (ruleId: number) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/categorization_rules', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: ruleId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete rule');
+      }
+
+      setSuccess('Rule deleted successfully');
+      await fetchRules();
+      
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error deleting rule:', error);
+      setError(error instanceof Error ? error.message : 'Failed to delete rule');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleApplyRules = async () => {
+    try {
+      setIsApplyingRules(true);
+      setError(null);
+
+      const response = await fetch('/api/apply_categorization_rules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to apply rules');
+      }
+
+      const result = await response.json();
+      setSuccess(`Successfully applied ${result.rulesApplied} rules to ${result.transactionsUpdated} transactions`);
+      
+      // Refresh categories and notify parent
+      await fetchCategories();
+      onCategoriesUpdated();
+      
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (error) {
+      console.error('Error applying rules:', error);
+      setError(error instanceof Error ? error.message : 'Failed to apply rules');
+    } finally {
+      setIsApplyingRules(false);
+    }
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        style: {
+          backgroundColor: '#ffffff',
+          borderRadius: '24px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+        }
+      }}
+    >
+      <DialogTitle style={{ 
+        color: '#333',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '24px 24px 16px 24px'
+      }}>
+        <Typography variant="h6" style={{ fontWeight: 600 }}>
+          Category Management
+        </Typography>
+        <IconButton onClick={handleClose} style={{ color: '#888' }}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent style={{ padding: '0 24px 24px 24px' }}>
+        {error && (
+          <Alert severity="error" style={{ marginBottom: '16px' }}>
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
+          <Alert severity="success" style={{ marginBottom: '16px' }}>
+            {success}
+          </Alert>
+        )}
+
+        <Tabs 
+          value={currentTab} 
+          onChange={(e, newValue) => setCurrentTab(newValue)}
+          style={{ marginBottom: '24px' }}
+        >
+          <Tab label="Categories" />
+          <Tab label="Rules" />
+        </Tabs>
+
+        {currentTab === 0 && (
+          <>
+            <Box style={{ marginBottom: '24px' }}>
+              <Typography variant="subtitle1" style={{ marginBottom: '12px', fontWeight: 600 }}>
+                Merge Categories
+              </Typography>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: '16px' }}>
+                Select multiple categories to merge them into a new consolidated category. 
+                All transactions from the selected categories will be moved to the new category.
+              </Typography>
+              
+              <TextField
+                fullWidth
+                label="New Category Name"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Enter name for merged category..."
+                style={{ marginBottom: '16px' }}
+                disabled={isLoading}
+              />
+              
+              <Button
+                variant="contained"
+                startIcon={<MergeIcon />}
+                onClick={handleMerge}
+                disabled={selectedCategories.length < 2 || !newCategoryName.trim() || isLoading}
+                style={{
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '12px',
+                  padding: '10px 24px',
+                  textTransform: 'none',
+                  fontWeight: 600
+                }}
+              >
+                {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Merge Selected Categories'}
+              </Button>
+            </Box>
+
+            <Divider style={{ margin: '24px 0' }} />
+
+            <Box>
+              <Typography variant="subtitle1" style={{ marginBottom: '16px', fontWeight: 600 }}>
+                Available Categories ({categories.length})
+              </Typography>
+              
+              {isLoading ? (
+                <Box display="flex" justifyContent="center" padding="32px">
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Box 
+                  style={{ 
+                    maxHeight: '400px', 
+                    overflow: 'auto',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '8px'
+                  }}
+                >
+                  {categories.map((category, index) => (
+                    <Chip
+                      key={category.name}
+                      label={category.name}
+                      onClick={() => handleCategoryToggle(category.name)}
+                      onDelete={selectedCategories.includes(category.name) ? () => handleCategoryToggle(category.name) : undefined}
+                      deleteIcon={<Checkbox
+                        checked={selectedCategories.includes(category.name)}
+                        style={{ color: 'white' }}
+                      />}
+                      style={{
+                        backgroundColor: selectedCategories.includes(category.name) 
+                          ? categoryColors[category.name] || '#3b82f6'
+                          : '#f8f9fa',
+                        color: selectedCategories.includes(category.name) 
+                          ? 'white'
+                          : '#333',
+                        border: selectedCategories.includes(category.name) 
+                          ? 'none'
+                          : `1px solid ${categoryColors[category.name] || '#3b82f6'}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease-in-out',
+                        fontWeight: selectedCategories.includes(category.name) ? '600' : '500',
+                        fontSize: '14px',
+                        height: '32px'
+                      }}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: selectedCategories.includes(category.name) 
+                            ? categoryColors[category.name] || '#3b82f6'
+                            : 'rgba(59, 130, 246, 0.1)',
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                        }
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </>
+        )}
+
+        {currentTab === 1 && (
+          <>
+            <Box style={{ marginBottom: '24px' }}>
+              <Typography variant="subtitle1" style={{ marginBottom: '12px', fontWeight: 600 }}>
+                Categorization Rules
+              </Typography>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: '16px' }}>
+                Create rules to automatically categorize transactions based on their names. 
+                Rules will be applied to existing and new transactions.
+              </Typography>
+              
+              <Grid container spacing={2} style={{ marginBottom: '16px' }}>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Transaction Name Pattern"
+                    value={newRule.name_pattern}
+                    onChange={(e) => setNewRule({ ...newRule, name_pattern: e.target.value })}
+                    placeholder="e.g., 'starbucks' or 'netflix'"
+                    disabled={isLoading}
+                  />
+                </Grid>
+                <Grid item xs={4}>
+                  <TextField
+                    fullWidth
+                    label="Target Category"
+                    value={newRule.target_category}
+                    onChange={(e) => setNewRule({ ...newRule, target_category: e.target.value })}
+                    placeholder="e.g., 'Food' or 'Entertainment'"
+                    disabled={isLoading}
+                  />
+                </Grid>
+                <Grid item xs={2}>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleCreateRule}
+                    disabled={!newRule.name_pattern.trim() || !newRule.target_category.trim() || isLoading}
+                    style={{
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      borderRadius: '12px',
+                      padding: '10px 16px',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      height: '56px',
+                      width: '100%'
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Add'}
+                  </Button>
+                </Grid>
+              </Grid>
+
+              <Button
+                variant="outlined"
+                startIcon={<PlayArrowIcon />}
+                onClick={handleApplyRules}
+                disabled={isApplyingRules || rules.length === 0}
+                style={{
+                  borderColor: '#3b82f6',
+                  color: '#3b82f6',
+                  borderRadius: '12px',
+                  padding: '10px 24px',
+                  textTransform: 'none',
+                  fontWeight: 600
+                }}
+              >
+                {isApplyingRules ? <CircularProgress size={20} color="inherit" /> : 'Apply Rules to Existing Transactions'}
+              </Button>
+            </Box>
+
+            <Divider style={{ margin: '24px 0' }} />
+
+            <Box>
+              <Typography variant="subtitle1" style={{ marginBottom: '16px', fontWeight: 600 }}>
+                Active Rules ({rules.length})
+              </Typography>
+              
+              {isLoadingRules ? (
+                <Box display="flex" justifyContent="center" padding="32px">
+                  <CircularProgress />
+                </Box>
+              ) : rules.length === 0 ? (
+                <Box style={{ textAlign: 'center', padding: '32px', color: '#666' }}>
+                  <Typography>No rules created yet. Create your first rule above.</Typography>
+                </Box>
+              ) : (
+                <Grid container spacing={2}>
+                  {rules.map((rule) => (
+                    <Grid item xs={12} key={rule.id}>
+                      <Card style={{ borderRadius: '12px' }}>
+                        <CardContent style={{ padding: '16px' }}>
+                          <Box display="flex" alignItems="center" justifyContent="space-between">
+                            <Box flex={1}>
+                              <Typography variant="body1" style={{ fontWeight: 600, marginBottom: '4px' }}>
+                                IF transaction name contains "{rule.name_pattern}"
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                THEN set category to "{rule.target_category}"
+                              </Typography>
+                            </Box>
+                            <Box display="flex" alignItems="center" gap="8px">
+                              <FormControlLabel
+                                control={
+                                  <Switch
+                                    checked={rule.is_active}
+                                    onChange={(e) => handleUpdateRule({ ...rule, is_active: e.target.checked })}
+                                    disabled={isLoading}
+                                  />
+                                }
+                                label=""
+                              />
+                              <IconButton
+                                onClick={() => setEditingRule(rule)}
+                                size="small"
+                                style={{ color: '#3b82f6' }}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => handleDeleteRule(rule.id)}
+                                size="small"
+                                style={{ color: '#ef4444' }}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </Box>
+
+            {editingRule && (
+              <Box style={{ 
+                position: 'fixed', 
+                top: 0, 
+                left: 0, 
+                right: 0, 
+                bottom: 0, 
+                backgroundColor: 'rgba(0,0,0,0.5)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                zIndex: 9999
+              }}>
+                <Card style={{ padding: '24px', maxWidth: '500px', width: '100%', margin: '16px' }}>
+                  <Typography variant="h6" style={{ marginBottom: '16px' }}>Edit Rule</Typography>
+                  <Grid container spacing={2} style={{ marginBottom: '16px' }}>
+                    <Grid item xs={6}>
+                      <TextField
+                        fullWidth
+                        label="Transaction Name Pattern"
+                        value={editingRule.name_pattern}
+                        onChange={(e) => setEditingRule({ ...editingRule, name_pattern: e.target.value })}
+                        disabled={isLoading}
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        fullWidth
+                        label="Target Category"
+                        value={editingRule.target_category}
+                        onChange={(e) => setEditingRule({ ...editingRule, target_category: e.target.value })}
+                        disabled={isLoading}
+                      />
+                    </Grid>
+                  </Grid>
+                  <Box display="flex" gap="8px" justifyContent="flex-end">
+                    <Button
+                      onClick={() => setEditingRule(null)}
+                      style={{ color: '#666' }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={() => handleUpdateRule(editingRule)}
+                      disabled={isLoading}
+                      style={{
+                        backgroundColor: '#3b82f6',
+                        color: 'white'
+                      }}
+                    >
+                      {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Update'}
+                    </Button>
+                  </Box>
+                </Card>
+              </Box>
+            )}
+          </>
+        )}
+      </DialogContent>
+
+      <DialogActions style={{ padding: '16px 24px 24px 24px' }}>
+        <Button
+          onClick={handleClose}
+          style={{
+            color: '#666',
+            borderRadius: '12px',
+            padding: '8px 16px',
+            textTransform: 'none',
+            fontWeight: 500
+          }}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default CategoryManagementModal; 

@@ -11,10 +11,13 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import SyncIcon from '@mui/icons-material/Sync';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PersonIcon from '@mui/icons-material/Person';
+import SettingsIcon from '@mui/icons-material/Settings';
+import EditIcon from '@mui/icons-material/Edit';
 import ScrapeModal from './ScrapeModal';
-import NewIncomeModal from './NewIncomeModal';
+import ManualModal from './ManualModal';
 import DatabaseIndicator from './DatabaseIndicator';
 import AccountsModal from './AccountsModal';
+import CategoryManagementModal from './CategoryDashboard/components/CategoryManagementModal';
 
 interface StringDictionary {
   [key: string]: string;
@@ -94,38 +97,47 @@ const redirectTo = (page: string) => {
 function ResponsiveAppBar() {
   const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
   const [isScrapeModalOpen, setIsScrapeModalOpen] = React.useState(false);
-  const [isNewIncomeModalOpen, setIsNewIncomeModalOpen] = React.useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = React.useState(false);
   const [isAccountsModalOpen, setIsAccountsModalOpen] = React.useState(false);
+  const [isCategoryManagementOpen, setIsCategoryManagementOpen] = React.useState(false);
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
   };
 
-  const handleAddNewIncome = async (incomeName: string, amount: number, date: Date) => {
+  const handleAddManualTransaction = async (transactionData: {
+    name: string;
+    amount: number;
+    date: Date;
+    type: 'income' | 'expense';
+    category?: string;
+  }) => {
     try {
-      const formattedDate = date.toISOString().split('T')[0];
+      const formattedDate = transactionData.date.toISOString().split('T')[0];
       
-      const response = await fetch("/api/income_transaction", {
+      const response = await fetch("/api/manual_transaction", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: incomeName,
-          amount: amount,
-          date: formattedDate
+          name: transactionData.name,
+          amount: transactionData.amount,
+          date: formattedDate,
+          type: transactionData.type,
+          category: transactionData.category
         }),
       });
 
       if (response.ok) {
-        setIsNewIncomeModalOpen(false);
+        setIsManualModalOpen(false);
         // Dispatch a custom event to trigger data refresh
         window.dispatchEvent(new CustomEvent('dataRefresh'));
       } else {
-        console.error("Failed to add new income");
+        console.error("Failed to add manual transaction");
       }
     } catch (error) {
-      console.error("Error adding new income:", error);
+      console.error("Error adding manual transaction:", error);
     }
   };
 
@@ -170,16 +182,22 @@ function ResponsiveAppBar() {
             <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <DatabaseIndicator />
               <NavButton
-                onClick={() => setIsNewIncomeModalOpen(true)}
-                startIcon={<TrendingUpIcon />}
+                onClick={() => setIsManualModalOpen(true)}
+                startIcon={<EditIcon />}
               >
-                Income
+                Manual
               </NavButton>
               <NavButton
                 onClick={() => setIsAccountsModalOpen(true)}
                 startIcon={<PersonIcon />}
               >
                 Accounts
+              </NavButton>
+              <NavButton
+                onClick={() => setIsCategoryManagementOpen(true)}
+                startIcon={<SettingsIcon />}
+              >
+                Categories
               </NavButton>
               <Menu
                 sx={{ mt: "45px" }}
@@ -206,14 +224,22 @@ function ResponsiveAppBar() {
         onClose={() => setIsScrapeModalOpen(false)}
         onSuccess={handleScrapeSuccess}
       />
-      <NewIncomeModal
-        open={isNewIncomeModalOpen}
-        onClose={() => setIsNewIncomeModalOpen(false)}
-        onSave={handleAddNewIncome}
+      <ManualModal
+        open={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        onSave={handleAddManualTransaction}
       />
       <AccountsModal
         isOpen={isAccountsModalOpen}
         onClose={() => setIsAccountsModalOpen(false)}
+      />
+      <CategoryManagementModal
+        open={isCategoryManagementOpen}
+        onClose={() => setIsCategoryManagementOpen(false)}
+        onCategoriesUpdated={() => {
+          // Dispatch a custom event to trigger data refresh
+          window.dispatchEvent(new CustomEvent('dataRefresh'));
+        }}
       />
     </>
   );
