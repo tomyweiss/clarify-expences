@@ -9,6 +9,8 @@ export interface Expense {
   price: number;
   date: string;
   category?: string;
+  identifier?: string;
+  vendor?: string;
 }
 
 export interface ExpensesModalProps {

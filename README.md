@@ -10,6 +10,7 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
 
 ### 💸 Smart Finance Tracking
 - **Bank account scraping** - Automatically import transactions from Israeli banks
+- **Manual transaction entry** - Add income and expenses manually with a unified interface
 - **Unified transaction model** - All financial movements (income and expenses) stored in one table
 - **Secure credential management** with end-to-end encryption
 - **Category-based tracking** for all expenses  
@@ -29,16 +30,9 @@ Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to cre
 - Secure credential storage and management
 - Bank account credentials stored securely
 
-### 📸 Screenshots
-
-#### Dashboard Overview
-![Dashboard](app/public/screenshots/dashboard.png)
-
-#### Expenses
-![Transactions](app/public/screenshots/expenses.png)
-
-#### Income
-![Analytics](app/public/screenshots/income.png)
+### 🎯 Account Management
+- **Organized account display** with separate sections for bank and credit card accounts
+- **Present account operations** with improved UI/UX
 
 ---
 
@@ -145,6 +139,28 @@ clarify-expenses/
 - **Simplified Dashboard**: Streamlined to show Total Income and Total Expenses with category breakdown
 - **Removed Legacy Components**: Eliminated separate income table and complex transaction categorization
 - **Clean Architecture**: Simplified database schema and API structure for better maintainability
+
+---
+
+### 📸 Screenshots
+
+#### Dashboard Overview
+![Dashboard](app/public/screenshots/dashboard.png)
+
+#### Expenses
+![Transactions](app/public/screenshots/category_example.png)
+
+#### Category Management
+##### Merger
+![Analytics](app/public/screenshots/category_management.png)
+##### Rules
+![Analytics](app/public/screenshots/category_management_rules.png)
+
+#### Bank Transactions
+![Analytics](app/public/screenshots/bank_transactions.png)
+
+#### Account Management
+![Analytics](app/public/screenshots/account_management.png)
 
 ---
 

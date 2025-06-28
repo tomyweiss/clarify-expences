@@ -8,8 +8,8 @@ const handler = createApiHandler({
     if (!req.query.id) {
       return "ID parameter is required";
     }
-    if (req.method === 'PUT' && !req.body?.price) {
-      return "Price is required for updates";
+    if (req.method === 'PUT' && !req.body?.price && !req.body?.category) {
+      return "Either price or category is required for updates";
     }
   },
   query: async (req) => {
@@ -26,14 +26,30 @@ const handler = createApiHandler({
       };
     }
 
-    // PUT method for updating price
+    // PUT method for updating price and/or category
+    const updates = [];
+    const params = [identifier, vendor];
+    let paramIndex = 3;
+
+    if (req.body.price !== undefined) {
+      updates.push(`price = $${paramIndex}`);
+      params.push(req.body.price);
+      paramIndex++;
+    }
+
+    if (req.body.category !== undefined) {
+      updates.push(`category = $${paramIndex}`);
+      params.push(req.body.category);
+      paramIndex++;
+    }
+
     return {
       sql: `
         UPDATE transactions 
-        SET price = $3
+        SET ${updates.join(', ')}
         WHERE identifier = $1 AND vendor = $2
       `,
-      params: [identifier, vendor, req.body.price]
+      params: params
     };
   },
   transform: (_) => {

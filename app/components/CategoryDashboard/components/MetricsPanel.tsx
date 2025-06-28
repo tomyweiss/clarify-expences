@@ -1,7 +1,6 @@
 import React from 'react';
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
-import Grid from "@mui/material/Grid2";
 import { styled } from "@mui/material/styles";
 import { useEffect } from "react";
 import { BoxPanelData } from '../types';
@@ -15,81 +14,87 @@ import IconButton from '@mui/material/IconButton';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
-const Item = styled(Paper)(({ theme }) => ({
+const MetricCard = styled(Paper)(({ theme }) => ({
   backgroundColor: '#ffffff',
   borderRadius: '16px',
-  padding: '16px',
-  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-  border: '1px solid rgba(0, 0, 0, 0.05)',
-  transition: 'all 0.3s ease-in-out',
+  padding: '20px',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+  border: '1px solid rgba(0, 0, 0, 0.06)',
+  transition: 'all 0.2s ease-in-out',
+  cursor: 'pointer',
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
   },
 }));
 
 const HeaderBox = styled(Box)({
   display: 'flex',
-  justifyContent: 'space-between',
+  justifyContent: 'flex-end',
   alignItems: 'center',
   marginBottom: '16px',
-  padding: '0 8px',
+  padding: '0 4px',
 });
 
-const MetricCard: React.FC<{ 
+const MetricItem: React.FC<{ 
   title: string; 
-  metricName: string; 
   value: string;
   icon: React.ReactNode;
   color: string;
-}> = ({ title, metricName, value, icon, color }) => {
+  subtitle?: string;
+}> = ({ title, value, icon, color, subtitle }) => {
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column',
-      height: '100%'
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
+    <MetricCard>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
         alignItems: 'center',
-        marginBottom: '8px'
+        textAlign: 'center',
+        gap: '8px'
       }}>
-        <h3 style={{ 
-          margin: 0, 
-          fontSize: '12px', 
-          color: '#777',
-          fontWeight: 500
-        }}>{title}</h3>
         <div style={{
-          backgroundColor: `${color}20`,
-          borderRadius: '8px',
-          padding: '6px',
+          backgroundColor: `${color}15`,
+          borderRadius: '12px',
+          padding: '12px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          marginBottom: '4px'
         }}>
           {React.cloneElement(icon as React.ReactElement, { 
             sx: { 
-              fontSize: '16px', 
+              fontSize: '24px', 
               color: color 
             } 
           })}
         </div>
+        <div>
+          <h3 style={{ 
+            margin: '0 0 4px 0', 
+            fontSize: '14px', 
+            color: '#666',
+            fontWeight: 500,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>{title}</h3>
+          <p style={{ 
+            margin: 0, 
+            fontSize: '24px', 
+            color: color,
+            fontWeight: 700,
+            lineHeight: '1.2'
+          }}>{value}</p>
+          {subtitle && (
+            <p style={{ 
+              margin: '4px 0 0 0', 
+              fontSize: '12px', 
+              color: '#888',
+              fontWeight: 400
+            }}>{subtitle}</p>
+          )}
+        </div>
       </div>
-      <h2 style={{ 
-        margin: '0 0 4px 0', 
-        fontSize: '18px', 
-        color: '#333',
-        fontWeight: 600
-      }}>{metricName}</h2>
-      <p style={{ 
-        margin: 0, 
-        fontSize: '24px', 
-        color: color,
-        fontWeight: 700
-      }}>{value}</p>
-    </div>
+    </MetricCard>
   );
 };
 
@@ -117,79 +122,53 @@ const MetricsPanel: React.FC = () => {
   }, []);
 
   return (
-    <Box sx={{ flexGrow: 1, mb: 8, mt: 4 }}>
+    <Box sx={{ flexGrow: 1, mb: 4, mt: 2 }}>
       <HeaderBox>
-        <h2 style={{ 
-          margin: 0, 
-          fontSize: '20px', 
-          color: '#333',
-          fontWeight: 600
-        }}>Overview</h2>
+
         <IconButton
           onClick={() => setOpen(!open)}
+          size="small"
           sx={{
-            color: '#555',
+            color: '#666',
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-            },
-            '&:active': {
-              transform: 'translateY(0)',
+              backgroundColor: 'rgba(0, 0, 0, 0.06)',
             },
           }}
         >
-          {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+          {open ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
         </IconButton>
       </HeaderBox>
       <Collapse in={open}>
-        <Grid container spacing={3} justifyContent="center">
-          <Grid size={3}>
-            <Item>
-              <MetricCard
-                title="Total Transactions"
-                metricName="Transactions"
-                value={data?.allTransactions? data.allTransactions: "N/A"}
-                icon={<ReceiptIcon />}
-                color="#3b82f6"
-              />
-            </Item>
-          </Grid>
-          <Grid size={3}>
-            <Item>
-              <MetricCard
-                title="Uncategorized"
-                metricName="Non-Mapped"
-                value={data?.nonMapped? data.nonMapped: "N/A"}
-                icon={<MonetizationOnIcon />}
-                color="#3b82f6"
-              />
-            </Item>
-          </Grid>
-          <Grid size={3}>
-            <Item>
-              <MetricCard
-                title="Active Categories"
-                metricName="Categories"
-                value={data?.categories? data.categories: "N/A"}
-                icon={<CategoryIcon />}
-                color="#3b82f6"
-              />
-            </Item>
-          </Grid>
-          <Grid size={3}>
-            <Item>
-              <MetricCard
-                title="Latest Activity"
-                metricName="Last Transaction"
-                value={data.lastMonth?data.lastMonth:"N/A"}
-                icon={<CalendarTodayIcon />}
-                color="#3b82f6"
-              />
-            </Item>
-          </Grid>
-        </Grid>
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '16px',
+          maxWidth: '800px',
+          margin: '0 auto'
+        }}>
+          <MetricItem
+            title="Total Transactions"
+            value={data?.allTransactions? data.allTransactions: "N/A"}
+            icon={<ReceiptIcon />}
+            color="#3b82f6"
+            subtitle="All time"
+          />
+          <MetricItem
+            title="Active Categories"
+            value={data?.categories? data.categories: "N/A"}
+            icon={<CategoryIcon />}
+            color="#3b82f6"
+            subtitle="In use"
+          />
+          <MetricItem
+            title="Latest Activity"
+            value={data.lastMonth?data.lastMonth:"N/A"}
+            icon={<CalendarTodayIcon />}
+            color="#3b82f6"
+            subtitle="Last transaction"
+          />
+        </Box>
       </Collapse>
     </Box>
   );

@@ -22,6 +22,30 @@ services:
       timeout: 5s
       retries: 5
 
+  clarify-migration:
+    image: postgres:16
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      PGPASSWORD: ${CLARIFY_DB_PASSWORD}
+      DB_HOST: clarify-db
+      DB_PORT: 5432
+      DB_NAME: ${CLARIFY_DB_NAME}
+      DB_USER: ${CLARIFY_DB_USER}
+    volumes:
+      - ./db-init:/docker-entrypoint-initdb.d
+    command: >
+      sh -c "
+        chmod +x /docker-entrypoint-initdb.d/run-migrations.sh &&
+        /docker-entrypoint-initdb.d/run-migrations.sh
+      "
+    depends_on:
+      clarify-db:
+        condition: service_healthy
+    networks:
+      - clarify-network
+
   clarify-app:
     build:
       context: ./app
@@ -37,8 +61,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      clarify-db:
-        condition: service_healthy
+      clarify-migration:
+        condition: service_completed_successfully
     networks:
       - clarify-network
     cap_add:

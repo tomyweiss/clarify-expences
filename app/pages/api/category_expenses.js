@@ -33,6 +33,7 @@ const handler = createApiHandler({
           name,
           price,
           date,
+          category,
           identifier,
           vendor
         FROM transactions 

@@ -1,6 +1,5 @@
 import React from 'react';
 import IconButton from '@mui/material/IconButton';
-import SortIcon from '@mui/icons-material/Sort';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
@@ -22,7 +21,6 @@ const CategoryDashboard: React.FC = () => {
   const [bankTransactions, setBankTransactions] = React.useState({ income: 0, expenses: 0 });
   const [creditCardTransactions, setCreditCardTransactions] = React.useState(0);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [isSorted, setIsSorted] = React.useState(true);
   const [loadingCategory, setLoadingCategory] = React.useState<string | null>(null);
   const [loadingBankTransactions, setLoadingBankTransactions] = React.useState(false);
   const [modalData, setModalData] = React.useState<ModalData>();
@@ -188,7 +186,7 @@ const CategoryDashboard: React.FC = () => {
       
       // Calculate total expenses: All negative values
       const totalExpenses = allTransactions
-        .filter((transaction: any) => transaction.price < 0)
+        .filter((transaction: any) => transaction.category === 'Bank' && transaction.price < 0)
         .reduce((acc: number, transaction: any) => acc + Math.abs(transaction.price), 0);
       
       // Calculate credit card expenses: All transactions excluding Bank and Income categories
@@ -226,7 +224,7 @@ const CategoryDashboard: React.FC = () => {
       color: categoryColors[item.name] || '#94a3b8',
       icon: categoryIcons[item.name] || MonetizationOnIcon
     };
-  }).sort((a, b) => isSorted ? Math.abs(b.value) - Math.abs(a.value) : 0);
+  });
 
   const handleBankTransactionsClick = async () => {
     setLoadingBankTransactions(true);
@@ -256,13 +254,16 @@ const CategoryDashboard: React.FC = () => {
         transaction.category === 'Bank'
       );
       
-      // Format the data correctly
+      // Format the data correctly - include identifier and vendor for editing/deleting
       setModalData({
         type: "Bank Transactions",
         data: bankTransactions.map((transaction: any) => ({
           name: transaction.name,
           price: transaction.price,
-          date: transaction.date
+          date: transaction.date,
+          category: transaction.category,
+          identifier: transaction.identifier,
+          vendor: transaction.vendor
         }))
       });
       
@@ -302,14 +303,16 @@ const CategoryDashboard: React.FC = () => {
         transaction.category !== 'Bank' && transaction.category !== 'Income'
       );
       
-      // Format the data correctly
+      // Format the data correctly - include identifier and vendor for editing/deleting
       setModalData({
         type: "Credit Card Expenses",
         data: creditCardData.map((transaction: any) => ({
           name: transaction.name,
           price: transaction.price,
           date: transaction.date,
-          category: transaction.category
+          category: transaction.category,
+          identifier: transaction.identifier,
+          vendor: transaction.vendor
         }))
       });
 
@@ -404,21 +407,26 @@ const CategoryDashboard: React.FC = () => {
     }
   };
 
-  const handleUpdateTransaction = async (transaction: any, newPrice: number) => {
+  const handleUpdateTransaction = async (transaction: any, newPrice: number, newCategory?: string) => {
     try {
+      const updateData: any = { price: newPrice };
+      if (newCategory !== undefined) {
+        updateData.category = newCategory;
+      }
+
       const response = await fetch(`/api/transactions/${transaction.identifier}|${transaction.vendor}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ price: newPrice }),
+        body: JSON.stringify(updateData),
       });
       
       if (response.ok) {
         // Update the transaction in the local state
         setTransactions(transactions.map(t => 
           t.identifier === transaction.identifier && t.vendor === transaction.vendor
-            ? { ...t, price: newPrice }
+            ? { ...t, price: newPrice, ...(newCategory !== undefined && { category: newCategory }) }
             : t
         ));
         // Refresh the data to update the metrics
@@ -461,19 +469,6 @@ const CategoryDashboard: React.FC = () => {
           }}
         >
           <TableChartIcon />
-        </IconButton>
-        <IconButton
-          onClick={() => setIsSorted(!isSorted)}
-          style={{
-            backgroundColor: isSorted ? '#edf2f7' : '#ffffff',
-            padding: '12px',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            color: isSorted ? '#333' : '#888',
-            transition: 'all 0.2s ease-in-out'
-          }}
-        >
-          <SortIcon />
         </IconButton>
         <select 
           value={selectedYear}
