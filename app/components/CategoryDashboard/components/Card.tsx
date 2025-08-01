@@ -51,7 +51,7 @@ const Card: React.FC<CardProps> = ({
         overflow: 'hidden',
         border: '1px solid rgba(0, 0, 0, 0.05)',
         cursor: onClick ? (isLoading ? 'default' : 'pointer') : 'default',
-        transition: 'all 0.3s ease-in-out'
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
       }}
       onClick={isLoading ? undefined : onClick}
       onMouseEnter={(e) => {

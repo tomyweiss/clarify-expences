@@ -17,7 +17,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 const MetricCard = styled(Paper)(({ theme }) => ({
   backgroundColor: '#ffffff',
   borderRadius: '16px',
-  padding: '20px',
+  padding: '12px',
   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
   border: '1px solid rgba(0, 0, 0, 0.06)',
   transition: 'all 0.2s ease-in-out',
@@ -32,8 +32,8 @@ const HeaderBox = styled(Box)({
   display: 'flex',
   justifyContent: 'flex-end',
   alignItems: 'center',
-  marginBottom: '16px',
-  padding: '0 4px',
+  marginBottom: '8px',
+  padding: '0 2px',
 });
 
 const MetricItem: React.FC<{ 
@@ -54,24 +54,24 @@ const MetricItem: React.FC<{
       }}>
         <div style={{
           backgroundColor: `${color}15`,
-          borderRadius: '12px',
-          padding: '12px',
+          borderRadius: '10px',
+          padding: '8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '4px'
+          marginBottom: '2px'
         }}>
           {React.cloneElement(icon as React.ReactElement, { 
             sx: { 
-              fontSize: '24px', 
+              fontSize: '20px', 
               color: color 
             } 
           })}
         </div>
         <div>
           <h3 style={{ 
-            margin: '0 0 4px 0', 
-            fontSize: '14px', 
+            margin: '0 0 2px 0', 
+            fontSize: '12px', 
             color: '#666',
             fontWeight: 500,
             textTransform: 'uppercase',
@@ -79,15 +79,15 @@ const MetricItem: React.FC<{
           }}>{title}</h3>
           <p style={{ 
             margin: 0, 
-            fontSize: '24px', 
+            fontSize: '20px', 
             color: color,
             fontWeight: 700,
-            lineHeight: '1.2'
+            lineHeight: '1.1'
           }}>{value}</p>
           {subtitle && (
             <p style={{ 
-              margin: '4px 0 0 0', 
-              fontSize: '12px', 
+              margin: '2px 0 0 0', 
+              fontSize: '11px', 
               color: '#888',
               fontWeight: 400
             }}>{subtitle}</p>
@@ -122,7 +122,7 @@ const MetricsPanel: React.FC = () => {
   }, []);
 
   return (
-    <Box sx={{ flexGrow: 1, mb: 4, mt: 2 }}>
+    <Box sx={{ flexGrow: 1, mb: 3, mt: 1 }}>
       <HeaderBox>
 
         <IconButton
@@ -143,7 +143,7 @@ const MetricsPanel: React.FC = () => {
         <Box sx={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px',
+          gap: '12px',
           maxWidth: '800px',
           margin: '0 auto'
         }}>

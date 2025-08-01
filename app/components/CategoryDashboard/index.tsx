@@ -4,6 +4,7 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import Button from '@mui/material/Button';
 import { ResponseData, Expense, ModalData } from './types';
 import { useCategoryIcons, useCategoryColors } from './utils/categoryUtils';
@@ -136,6 +137,16 @@ const CategoryDashboard: React.FC = () => {
     const newMonth = event.target.value;
     setSelectedMonth(newMonth);
     fetchData(`${selectedYear}-${newMonth}`);
+  };
+
+  const handleRefreshClick = () => {
+    if (selectedYear && selectedMonth) {
+      const currentMonth = `${selectedYear}-${selectedMonth}`;
+      fetchData(currentMonth);
+      if (showTransactionsTable) {
+        fetchTransactions();
+      }
+    }
   };
 
   const fetchData = async (month: string) => {
@@ -457,6 +468,19 @@ const CategoryDashboard: React.FC = () => {
         marginTop: '16px',
         gap: '12px'
       }}>
+        <IconButton
+          onClick={handleRefreshClick}
+          style={{
+            backgroundColor: '#ffffff',
+            padding: '12px',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            color: '#888',
+            transition: 'all 0.2s ease-in-out'
+          }}
+        >
+          <RefreshIcon />
+        </IconButton>
         <IconButton
           onClick={handleTransactionsTableClick}
           style={{

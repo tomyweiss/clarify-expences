@@ -1,22 +1,11 @@
 import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Paper,
-  Box,
-  Typography,
-  IconButton,
-  TextField,
-  Autocomplete,
-} from '@mui/material';
+import { Table, TableBody, TableCell, TableHead, TableRow, Paper, Box, Typography, IconButton, TextField, Autocomplete } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { formatNumber } from '../utils/formatUtils';
+import { dateUtils } from '../utils/dateUtils';
 
 interface Transaction {
   name: string;
@@ -114,10 +103,10 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
       >
         <TableHead>
           <TableRow>
-            <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Date</TableCell>
             <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Description</TableCell>
             <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Category</TableCell>
             <TableCell align="right" style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Amount</TableCell>
+            <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Date</TableCell>
             <TableCell align="right" style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -128,9 +117,6 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
               onClick={() => handleRowClick(transaction)}
               style={{ cursor: 'pointer' }}
             >
-              <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
-                {new Date(transaction.date).toLocaleDateString()}
-              </TableCell>
               <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
                 {transaction.name}
               </TableCell>
@@ -234,6 +220,9 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                 ) : (
                   `₪${formatNumber(Math.abs(transaction.price))}`
                 )}
+              </TableCell>
+              <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
+                                  {dateUtils.formatDate(transaction.date)}
               </TableCell>
               <TableCell align="right" style={{ borderBottom: '1px solid #e2e8f0' }}>
                 {editingTransaction?.identifier === transaction.identifier ? (

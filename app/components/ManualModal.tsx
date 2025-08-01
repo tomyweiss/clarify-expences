@@ -19,6 +19,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import ModalHeader from './ModalHeader';
 
 interface ManualModalProps {
   open: boolean;
@@ -186,20 +188,7 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
         }
       }}
     >
-      <DialogTitle style={{ 
-        color: '#333',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '24px 24px 0 24px'
-      }}>
-        <Typography variant="h6" style={{ fontWeight: 600 }}>
-          Manual Transaction Entry
-        </Typography>
-        <IconButton onClick={handleClose} style={{ color: '#888' }}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+      <ModalHeader title="Manual Transaction Entry" onClose={handleClose} />
 
       <DialogContent style={{ padding: '0 24px 24px' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
@@ -238,17 +227,25 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
 
         <TabPanel value={tabValue} index={0}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{
-              backgroundColor: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '8px',
-              padding: '12px',
-              color: '#0369a1',
-              fontSize: '14px',
-              lineHeight: '1.4'
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              p: 2,
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #ecfeff 0%, #f0f9ff 60%)',
+              border: '1px solid #e0f2fe',
+              color: '#0c4a6e',
+              boxShadow: '0 4px 16px rgba(12,74,110,0.06)'
             }}>
-              💡 Add manual income transactions that will be stored and appear in your Bank Transactions widget.
-            </div>
+              <LightbulbOutlinedIcon sx={{ color: '#0284c7' }} />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '14px' }}>Manual income</div>
+                <div style={{ fontSize: '13px', opacity: 0.9 }}>
+                  Add manual income transactions. They will appear in Bank Transactions.
+                </div>
+              </div>
+            </Box>
             
             <TextField
               label="Income Name"
@@ -345,17 +342,25 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
 
         <TabPanel value={tabValue} index={1}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
-              padding: '12px',
-              color: '#dc2626',
-              fontSize: '14px',
-              lineHeight: '1.4'
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              p: 2,
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #fff1f2 0%, #fef2f2 60%)',
+              border: '1px solid #fee2e2',
+              color: '#7f1d1d',
+              boxShadow: '0 4px 16px rgba(127,29,29,0.06)'
             }}>
-              💡 Add manual expense transactions that will be categorized and tracked in your expense reports.
-            </div>
+              <LightbulbOutlinedIcon sx={{ color: '#dc2626' }} />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '14px' }}>Manual expense</div>
+                <div style={{ fontSize: '13px', opacity: 0.9 }}>
+                  Add manual expenses to be categorized and included in reports.
+                </div>
+              </div>
+            </Box>
             
             <TextField
               label="Expense Name"

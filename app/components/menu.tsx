@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from "react";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
@@ -8,16 +8,17 @@ import Container from "@mui/material/Container";
 import Button from "@mui/material/Button";
 import { styled } from "@mui/material/styles";
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import SyncIcon from '@mui/icons-material/Sync';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import EditIcon from '@mui/icons-material/Edit';
+import HistoryIcon from '@mui/icons-material/History';
 import ScrapeModal from './ScrapeModal';
 import ManualModal from './ManualModal';
 import DatabaseIndicator from './DatabaseIndicator';
 import AccountsModal from './AccountsModal';
 import CategoryManagementModal from './CategoryDashboard/components/CategoryManagementModal';
+import ScrapeAuditModal from './ScrapeAuditModal';
+import { useNotification } from './NotificationContext';
 
 interface StringDictionary {
   [key: string]: string;
@@ -39,7 +40,7 @@ const Logo = styled(Typography)({
   color: "#fff",
   textDecoration: "none",
   cursor: "pointer",
-  fontSize: '1.5rem',
+  fontSize: '1.25rem',
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -51,9 +52,9 @@ const Logo = styled(Typography)({
 const NavButton = styled(Button)({
   color: '#fff',
   textTransform: 'none',
-  fontSize: '1rem',
+  fontSize: '0.95rem',
   fontWeight: 500,
-  padding: '8px 16px',
+  padding: '6px 12px',
   borderRadius: '12px',
   margin: '0 4px',
   transition: 'all 0.2s ease-in-out',
@@ -70,9 +71,9 @@ const NavButton = styled(Button)({
 const SignOutButton = styled(Button)({
   color: '#fff',
   textTransform: 'none',
-  fontSize: '1rem',
+  fontSize: '0.95rem',
   fontWeight: 500,
-  padding: '8px 16px',
+  padding: '6px 12px',
   borderRadius: '12px',
   marginLeft: '8px',
   display: 'flex',
@@ -100,6 +101,8 @@ function ResponsiveAppBar() {
   const [isManualModalOpen, setIsManualModalOpen] = React.useState(false);
   const [isAccountsModalOpen, setIsAccountsModalOpen] = React.useState(false);
   const [isCategoryManagementOpen, setIsCategoryManagementOpen] = React.useState(false);
+  const [isAuditOpen, setIsAuditOpen] = React.useState(false);
+  const { showNotification } = useNotification();
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
@@ -142,6 +145,7 @@ function ResponsiveAppBar() {
   };
 
   const handleScrapeSuccess = () => {
+    showNotification('Scraping process completed successfully!', 'success');
     // Dispatch a custom event to trigger data refresh
     window.dispatchEvent(new CustomEvent('dataRefresh'));
   };
@@ -150,7 +154,7 @@ function ResponsiveAppBar() {
     <>
       <StyledAppBar position="fixed">
         <Container maxWidth={false}>
-          <Toolbar disableGutters sx={{ minHeight: '64px' }}>
+          <Toolbar disableGutters variant="dense" sx={{ minHeight: '48px' }}>
             <Logo
               variant="h4"
               noWrap
@@ -160,7 +164,7 @@ function ResponsiveAppBar() {
                 display: { xs: "none", md: "flex" },
               }}
             >
-              <AccountBalanceWalletIcon sx={{ fontSize: '24px' }} />
+              <AccountBalanceWalletIcon sx={{ fontSize: '20px' }} />
               Clarify
             </Logo>
 
@@ -180,7 +184,12 @@ function ResponsiveAppBar() {
               ))}
             </Box>
             <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <DatabaseIndicator />
+              <NavButton
+                onClick={() => setIsAuditOpen(true)}
+                startIcon={<HistoryIcon />}
+              >
+                Audit
+              </NavButton>
               <NavButton
                 onClick={() => setIsManualModalOpen(true)}
                 startIcon={<EditIcon />}
@@ -188,16 +197,16 @@ function ResponsiveAppBar() {
                 Manual
               </NavButton>
               <NavButton
-                onClick={() => setIsAccountsModalOpen(true)}
-                startIcon={<PersonIcon />}
-              >
-                Accounts
-              </NavButton>
-              <NavButton
                 onClick={() => setIsCategoryManagementOpen(true)}
                 startIcon={<SettingsIcon />}
               >
                 Categories
+              </NavButton>
+              <NavButton
+                onClick={() => setIsAccountsModalOpen(true)}
+                startIcon={<PersonIcon />}
+              >
+                Accounts
               </NavButton>
               <Menu
                 sx={{ mt: "45px" }}
@@ -215,6 +224,7 @@ function ResponsiveAppBar() {
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
               />
+              <DatabaseIndicator />
             </Box>
           </Toolbar>
         </Container>
@@ -241,6 +251,7 @@ function ResponsiveAppBar() {
           window.dispatchEvent(new CustomEvent('dataRefresh'));
         }}
       />
+      <ScrapeAuditModal open={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
     </>
   );
 }

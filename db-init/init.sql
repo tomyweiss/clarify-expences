@@ -46,3 +46,16 @@ CREATE TABLE IF NOT EXISTS categorization_rules (
 -- Add index for better performance when matching rules
 CREATE INDEX IF NOT EXISTS idx_categorization_rules_pattern ON categorization_rules(name_pattern);
 CREATE INDEX IF NOT EXISTS idx_categorization_rules_active ON categorization_rules(is_active);
+
+-- Audit table to track scrape events
+CREATE TABLE IF NOT EXISTS scrape_events (
+    id SERIAL PRIMARY KEY,
+    triggered_by VARCHAR(100),
+    vendor VARCHAR(100) NOT NULL,
+    start_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'started',
+    message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_scrape_events_created_at ON scrape_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scrape_events_vendor ON scrape_events(vendor);

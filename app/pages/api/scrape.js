@@ -4,11 +4,10 @@ import { getDB } from './db';
 import { BANK_VENDORS } from '../../utils/constants';
 
 async function insertTransaction(txn, client, companyId, isBank) {
-  if (!txn.identifier || txn.identifier === ""){
-    const hash = crypto.createHash('sha1');
-    hash.update(txn.processed_date + companyId);
-    txn.identifier = hash.digest('hex');
-  }
+  const uniqueId = `${txn.identifier}-${txn.vendor}-${txn.processedDate}-${txn.description}`;
+  const hash = crypto.createHash('sha1');
+  hash.update(uniqueId);
+  txn.identifier = hash.digest('hex');
 
   let amount = txn.chargedAmount;
   let category = txn.category;
@@ -143,27 +142,78 @@ export default async function handler(req, res) {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
+    // Insert audit row: started
+    const triggeredBy = credentials?.username || credentials?.id || credentials?.nickname || 'unknown';
+    const insertAudit = await client.query(
+      `INSERT INTO scrape_events (triggered_by, vendor, start_date, status, message)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [
+        triggeredBy,
+        options.companyId,
+        new Date(options.startDate),
+        'started',
+        'Scrape initiated'
+      ]
+    );
+    const auditId = insertAudit.rows[0]?.id;
+
     const result = await scraper.scrape(scraperCredentials);
+    
     console.log('Scraping result:');
     console.log(JSON.stringify(result, null, 2));
+    
     if (!result.success) {
+      // Update audit as failed
+      if (auditId) {
+        await client.query(
+          `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
+          ['failed', result.errorType || 'Scraping failed', auditId]
+        );
+      }
       throw new Error(result.errorType || 'Scraping failed');
     }
     
+    let bankTransactions = 0;
     for (const account of result.accounts) {
       for (const txn of account.txns) {
+        if (isBank){
+          bankTransactions++
+        }
         await insertTransaction(txn, client, options.companyId, isBank);
       }
     }
 
     await applyCategorizationRules(client);
 
-    res.status(200).json({ 
+    console.log(`Scraped ${bankTransactions} bank transactions`);
+
+    // Update audit as success
+    if (auditId) {
+      const accountsCount = Array.isArray(result.accounts) ? result.accounts.length : 0;
+      const message = `Success: accounts=${accountsCount}, bankTxns=${bankTransactions}`;
+      await client.query(
+        `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
+        ['success', message, auditId]
+      );
+    }
+
+    res.status(200).json({
       message: 'Scraping and database update completed successfully',
       accounts: result.accounts
     });
   } catch (error) {
     console.error('Scraping failed:', error);
+    // Attempt to log failure if an audit row exists in scope
+    try {
+      if (typeof auditId !== 'undefined' && auditId) {
+        await client.query(
+          `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
+          ['failed', error instanceof Error ? error.message : 'Unknown error', auditId]
+        );
+      }
+    } catch (e) {
+      // noop - avoid masking original error
+    }
     res.status(500).json({ 
       message: 'Scraping failed',
       error: error instanceof Error ? error.message : 'Unknown error'

@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
-import CloseIcon from '@mui/icons-material/Close';
-import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
+import { useNotification } from './NotificationContext';
+import ModalHeader from './ModalHeader';
 
 interface ScraperConfig {
   options: {
@@ -41,6 +40,9 @@ interface ScrapeModalProps {
 export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig }: ScrapeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showNotification } = useNotification();
+  const todayStr = new Date().toISOString().split('T')[0];
+  const clampDateString = (value: string) => (value > todayStr ? todayStr : value);
   const defaultConfig: ScraperConfig = {
     options: {
       companyId: 'isracard',
@@ -109,6 +111,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         throw new Error('Failed to start scraping');
       }
 
+      showNotification('Scraping process started successfully!', 'success');
       onClose();
       onSuccess?.();
     } catch (err) {
@@ -133,16 +136,6 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           <MenuItem value="max">Max</MenuItem>
         </Select>
       </FormControl>
-
-      <TextField
-        label="Start Date"
-        type="date"
-        value={config.options.startDate.toISOString().split('T')[0]}
-        onChange={(e) => handleConfigChange('options.startDate', new Date(e.target.value))}
-        InputLabelProps={{
-          shrink: true,
-        }}
-      />
 
       {config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
         <TextField
@@ -175,6 +168,20 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         onChange={(e) => handleConfigChange('credentials.password', e.target.value)}
         fullWidth
       />
+
+      <TextField
+        label="Start Date"
+        type="date"
+        value={config.options.startDate.toISOString().split('T')[0]}
+        onChange={(e) => {
+          const v = clampDateString(e.target.value);
+          handleConfigChange('options.startDate', new Date(v));
+        }}
+        InputLabelProps={{
+          shrink: true,
+        }}
+        inputProps={{ max: todayStr }}
+      />
     </>
   );
 
@@ -185,15 +192,6 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         value={config.credentials.nickname}
         disabled
         fullWidth
-      />
-      <TextField
-        label="Start Date"
-        type="date"
-        value={config.options.startDate.toISOString().split('T')[0]}
-        onChange={(e) => handleConfigChange('options.startDate', new Date(e.target.value))}
-        InputLabelProps={{
-          shrink: true,
-        }}
       />
       {config.credentials.username && (
         <TextField
@@ -227,6 +225,20 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           fullWidth
         />
       )}
+
+      <TextField
+        label="Start Date"
+        type="date"
+        value={config.options.startDate.toISOString().split('T')[0]}
+        onChange={(e) => {
+          const v = clampDateString(e.target.value);
+          handleConfigChange('options.startDate', new Date(v));
+        }}
+        InputLabelProps={{
+          shrink: true,
+        }}
+        inputProps={{ max: todayStr }}
+      />
     </>
   );
 
@@ -244,20 +256,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         }
       }}
     >
-      <DialogTitle style={{ 
-        color: '#333',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '24px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span>Expenses</span>
-        </div>
-        <IconButton onClick={onClose} style={{ color: '#888' }}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+      <ModalHeader title="Scrape" onClose={onClose} />
       <DialogContent style={{ padding: '0 24px 24px' }}>
         {error && (
           <div style={{
