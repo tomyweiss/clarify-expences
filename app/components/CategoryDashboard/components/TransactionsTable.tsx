@@ -222,7 +222,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                 )}
               </TableCell>
               <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
-                                  {dateUtils.formatDate(transaction.date)}
+                {dateUtils.formatDate(transaction.date)}
               </TableCell>
               <TableCell align="right" style={{ borderBottom: '1px solid #e2e8f0' }}>
                 {editingTransaction?.identifier === transaction.identifier ? (
