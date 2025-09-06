@@ -4,7 +4,7 @@ import { getDB } from './db';
 import { BANK_VENDORS } from '../../utils/constants';
 
 async function insertTransaction(txn, client, companyId, isBank) {
-  const uniqueId = `${txn.identifier}-${txn.vendor}-${txn.processedDate}-${txn.description}`;
+  const uniqueId = `${txn.identifier}-${companyId}-${txn.processedDate}-${txn.description}`;
   const hash = crypto.createHash('sha1');
   hash.update(uniqueId);
   txn.identifier = hash.digest('hex');
