@@ -277,7 +277,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
               <TableCell>{account.vendor}</TableCell>
               <TableCell>{account.username || account.id_number}</TableCell>
               <TableCell>{type === 'bank' ? account.bank_account_number : (account.card6_digits || '-')}</TableCell>
-                              <TableCell>{dateUtils.formatDate(account.created_at)}</TableCell>
+              <TableCell>{dateUtils.formatDate(account.created_at)}</TableCell>
               <TableCell align="right">
                 <IconButton
                   onClick={() => handleScrape(account)}
