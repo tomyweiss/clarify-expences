@@ -94,5 +94,3 @@ export default function ScrapeAuditModal({ open, onClose }: Props) {
     </Dialog>
   );
 }
-
-
