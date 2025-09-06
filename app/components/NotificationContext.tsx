@@ -66,4 +66,4 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       </Snackbar>
     </NotificationContext.Provider>
   );
-}; 
+};
