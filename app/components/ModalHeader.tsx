@@ -32,5 +32,3 @@ export default function ModalHeader({ title, onClose, actions }: ModalHeaderProp
     </DialogTitle>
   );
 }
-
-
