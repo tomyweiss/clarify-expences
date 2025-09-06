@@ -25,6 +25,9 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import ScrapeModal from './ScrapeModal';
 import { CREDIT_CARD_VENDORS, BANK_VENDORS } from '../utils/constants';
+import { dateUtils } from './CategoryDashboard/utils/dateUtils';
+import { useNotification } from './NotificationContext';
+import ModalHeader from './ModalHeader';
 
 interface Account {
   id: number;
@@ -76,6 +79,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [isScrapeModalOpen, setIsScrapeModalOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const { showNotification } = useNotification();
   const [newAccount, setNewAccount] = useState<Account>({
     vendor: 'isracard',
     username: '',
@@ -221,6 +225,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
   };
 
   const handleScrapeSuccess = () => {
+    showNotification('Scraping process completed successfully!', 'success');
     window.dispatchEvent(new CustomEvent('dataRefresh'));
   };
 
@@ -272,7 +277,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
               <TableCell>{account.vendor}</TableCell>
               <TableCell>{account.username || account.id_number}</TableCell>
               <TableCell>{type === 'bank' ? account.bank_account_number : (account.card6_digits || '-')}</TableCell>
-              <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
+              <TableCell>{dateUtils.formatDate(account.created_at)}</TableCell>
               <TableCell align="right">
                 <IconButton
                   onClick={() => handleScrape(account)}
@@ -315,20 +320,19 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             onClose();
           }
         }} 
-        maxWidth="lg" 
+        maxWidth="md" 
         fullWidth
       >
-        <DialogTitle style={{ 
-          color: '#333',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '24px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span>Accounts Management</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <ModalHeader 
+          title="Accounts Management" 
+          onClose={() => {
+            if (isAdding) {
+              setIsAdding(false);
+            } else {
+              onClose();
+            }
+          }}
+          actions={
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -342,17 +346,8 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             >
               Add Account
             </Button>
-            <IconButton onClick={() => {
-              if (isAdding) {
-                setIsAdding(false);
-              } else {
-                onClose();
-              }
-            }} style={{ color: '#888' }}>
-              <CloseIcon />
-            </IconButton>
-          </div>
-        </DialogTitle>
+          }
+        />
         <DialogContent style={{ padding: '0 24px 24px' }}>
           {error && (
             <div style={{

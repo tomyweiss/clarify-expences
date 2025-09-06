@@ -4,6 +4,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
+import ModalHeader from '../../ModalHeader';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -15,7 +16,9 @@ import CheckIcon from '@mui/icons-material/Check';
 import EditIcon from '@mui/icons-material/Edit';
 import { ExpensesModalProps, Expense } from '../types';
 import { formatNumber } from '../utils/format';
-import { LineChart } from '@mui/x-charts/LineChart';
+import { dateUtils } from '../utils/dateUtils';
+import dynamic from 'next/dynamic';
+const LineChart = dynamic(() => import('@mui/x-charts').then(m => m.LineChart), { ssr: false });
 import Box from '@mui/material/Box';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -236,20 +239,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
         }
       }}
     >
-      <DialogTitle style={{ 
-        color: '#333',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '24px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ color: '#555', fontSize: '14px' }}>{data.type}</span>
-        </div>
-        <IconButton onClick={onClose} style={{ color: '#888' }}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+      <ModalHeader title={data.type} onClose={onClose} />
       <DialogContent style={{ padding: '24px' }}>
         {data.type !== "Bank Transactions" && (
           <Box sx={{ mb: 4 }}>
@@ -319,10 +309,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
         >
           <TableHead>
             <TableRow>
-              <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Date</TableCell>
               <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0', width: '200px', maxWidth: '200px' }}>Description</TableCell>
               <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Category</TableCell>
               <TableCell align="right" style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Amount</TableCell>
+              <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Date</TableCell>
               <TableCell align="center" style={{ color: '#555', borderBottom: '1px solid #e2e8f0', width: '120px' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -333,9 +323,6 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                 onClick={() => handleRowClick(expense)}
                 style={{ cursor: 'pointer' }}
               >
-                <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
-                  {new Date(expense.date).toLocaleDateString()}
-                </TableCell>
                 <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
                   {expense.name}
                 </TableCell>
@@ -447,6 +434,9 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                       ? `${expense.price >= 0 ? '+' : ''}₪${formatNumber(Math.abs(expense.price))}`
                       : `₪${formatNumber(Math.abs(expense.price))}`
                   )}
+                </TableCell>
+                <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
+                  {dateUtils.formatDate(expense.date)}
                 </TableCell>
                 <TableCell align="center" style={{ borderBottom: '1px solid #e2e8f0' }}>
                   {editingExpense?.identifier === expense.identifier && 

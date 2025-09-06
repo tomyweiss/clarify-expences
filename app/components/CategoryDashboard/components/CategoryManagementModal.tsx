@@ -33,6 +33,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useCategoryColors } from '../utils/categoryUtils';
+import ModalHeader from '../../ModalHeader';
 
 interface Category {
   name: string;
@@ -340,20 +341,7 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
         }
       }}
     >
-      <DialogTitle style={{ 
-        color: '#333',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '24px 24px 16px 24px'
-      }}>
-        <Typography variant="h6" style={{ fontWeight: 600 }}>
-          Category Management
-        </Typography>
-        <IconButton onClick={handleClose} style={{ color: '#888' }}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+      <ModalHeader title="Category Management" onClose={handleClose} />
 
       <DialogContent style={{ padding: '0 24px 24px 24px' }}>
         {error && (

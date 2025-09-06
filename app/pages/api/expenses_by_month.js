@@ -51,12 +51,10 @@ const handler = createApiHandler({
     };
   },
   transform: (result) => {
-    return result.rows
-      .map(row => ({
-        ...row,
-        amount: parseFloat(row.amount) || 0
-      }))
-      .sort((a, b) => new Date(a.year_sort) - new Date(b.year_sort));
+    return result.rows.map(row => ({
+      ...row,
+      amount: parseFloat(row.amount) || 0
+    }));
   }
 });
 
