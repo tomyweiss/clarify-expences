@@ -177,7 +177,7 @@ export default async function handler(req, res) {
     for (const account of result.accounts) {
       for (const txn of account.txns) {
         if (isBank){
-          bankTransactions++
+          bankTransactions++;
         }
         await insertTransaction(txn, client, options.companyId, isBank);
       }
