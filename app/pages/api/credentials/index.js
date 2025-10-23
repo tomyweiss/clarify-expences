@@ -1,7 +1,7 @@
-import { createApiHandler } from "../utils/apiHandler";
+import { createAuthenticatedApiHandler } from "../middleware/auth";
 import { encrypt, decrypt } from "../utils/encryption";
 
-const handler = createApiHandler({
+const handler = createAuthenticatedApiHandler({
   validate: (req) => {
     if (req.method === 'GET') {
       return null;
@@ -69,7 +69,8 @@ const handler = createApiHandler({
         id: row.id,
         vendor: row.vendor,
         username: row.username ? decrypt(row.username) : null,
-        password: row.password ? decrypt(row.password) : null,
+        // SECURITY: Never return passwords to the client
+        // password field is omitted for security
         id_number: row.id_number ? decrypt(row.id_number) : null,
         card6_digits: row.card6_digits ? decrypt(row.card6_digits) : null,
         nickname: row.nickname,

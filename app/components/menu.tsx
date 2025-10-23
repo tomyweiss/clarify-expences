@@ -12,6 +12,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import EditIcon from '@mui/icons-material/Edit';
 import HistoryIcon from '@mui/icons-material/History';
+import LogoutIcon from '@mui/icons-material/Logout';
 import ScrapeModal from './ScrapeModal';
 import ManualModal from './ManualModal';
 import DatabaseIndicator from './DatabaseIndicator';
@@ -19,6 +20,7 @@ import AccountsModal from './AccountsModal';
 import CategoryManagementModal from './CategoryDashboard/components/CategoryManagementModal';
 import ScrapeAuditModal from './ScrapeAuditModal';
 import { useNotification } from './NotificationContext';
+import { useAuth } from './AuthContext';
 
 interface StringDictionary {
   [key: string]: string;
@@ -27,41 +29,62 @@ interface StringDictionary {
 const pages: StringDictionary = {};
 
 const StyledAppBar = styled(AppBar)({
-  background: 'rgba(20, 20, 20, 0.8)',
-  backdropFilter: 'blur(10px)',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-  boxShadow: 'none',
+  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+  backdropFilter: 'blur(20px)',
+  borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
 });
 
 const Logo = styled(Typography)({
   fontFamily: "Assistant, sans-serif",
   fontWeight: 700,
   letterSpacing: ".3rem",
-  color: "#fff",
+  background: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #ec4899 100%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
   textDecoration: "none",
   cursor: "pointer",
-  fontSize: '1.25rem',
+  fontSize: '1.5rem',
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
+  gap: '10px',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
-    color: '#3b82f6',
+    transform: 'translateY(-2px)',
+    filter: 'brightness(1.2)',
   },
 });
 
 const NavButton = styled(Button)({
-  color: '#fff',
+  color: 'rgba(255, 255, 255, 0.9)',
   textTransform: 'none',
   fontSize: '0.95rem',
   fontWeight: 500,
-  padding: '6px 12px',
+  padding: '8px 16px',
   borderRadius: '12px',
   margin: '0 4px',
-  transition: 'all 0.2s ease-in-out',
+  position: 'relative',
+  overflow: 'hidden',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: '-100%',
+    width: '100%',
+    height: '100%',
+    background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+    transition: 'left 0.5s ease-in-out',
+  },
   '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    transform: 'translateY(-1px)',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 8px 16px rgba(96, 165, 250, 0.3)',
+    color: '#fff',
+  },
+  '&:hover::before': {
+    left: '100%',
   },
   '&:active': {
     transform: 'translateY(0)',
@@ -103,6 +126,16 @@ function ResponsiveAppBar() {
   const [isCategoryManagementOpen, setIsCategoryManagementOpen] = React.useState(false);
   const [isAuditOpen, setIsAuditOpen] = React.useState(false);
   const { showNotification } = useNotification();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      showNotification('Logged out successfully', 'success');
+    } catch (error) {
+      showNotification('Logout failed', 'error');
+    }
+  };
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
@@ -164,7 +197,7 @@ function ResponsiveAppBar() {
                 display: { xs: "none", md: "flex" },
               }}
             >
-              <AccountBalanceWalletIcon sx={{ fontSize: '20px' }} />
+              <AccountBalanceWalletIcon sx={{ fontSize: '24px', color: '#60a5fa' }} />
               Clarify
             </Logo>
 
@@ -208,6 +241,12 @@ function ResponsiveAppBar() {
               >
                 Accounts
               </NavButton>
+              <SignOutButton
+                onClick={handleLogout}
+                startIcon={<LogoutIcon />}
+              >
+                Logout
+              </SignOutButton>
               <Menu
                 sx={{ mt: "45px" }}
                 id="menu-appbar"

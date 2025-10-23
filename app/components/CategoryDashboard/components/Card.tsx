@@ -40,30 +40,35 @@ const Card: React.FC<CardProps> = ({
   return (
     <div
       style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '24px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '28px',
         padding: padding,
         width: '100%',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        border: '1px solid rgba(0, 0, 0, 0.05)',
+        border: '1px solid rgba(148, 163, 184, 0.15)',
         cursor: onClick ? (isLoading ? 'default' : 'pointer') : 'default',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
       onClick={isLoading ? undefined : onClick}
       onMouseEnter={(e) => {
-        if (!isLoading) {
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
+        if (!isLoading && onClick) {
+          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-8px) scale(1.03)';
+          (e.currentTarget as HTMLDivElement).style.boxShadow = `0 12px 32px ${color}20`;
+          (e.currentTarget as HTMLDivElement).style.borderColor = `${color}80`;
+          (e.currentTarget as HTMLDivElement).style.background = 'rgba(255, 255, 255, 0.98)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isLoading) {
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.08)';
+          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0) scale(1)';
+          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0, 0, 0, 0.04)';
+          (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(148, 163, 184, 0.15)';
+          (e.currentTarget as HTMLDivElement).style.background = 'rgba(255, 255, 255, 0.95)';
         }
       }}
     >
@@ -88,10 +93,21 @@ const Card: React.FC<CardProps> = ({
         position: 'absolute',
         top: 0,
         right: 0,
-        width: size === 'large' ? '100px' : '80px',
-        height: size === 'large' ? '100px' : '80px',
-        background: `radial-gradient(circle at top right, ${color}20, transparent 70%)`,
-        opacity: size === 'large' ? 0.5 : 0.3
+        width: size === 'large' ? '140px' : '100px',
+        height: size === 'large' ? '140px' : '100px',
+        background: `radial-gradient(circle at top right, ${color}25, ${color}10 50%, transparent 70%)`,
+        opacity: size === 'large' ? 0.6 : 0.4,
+        filter: 'blur(20px)'
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        width: size === 'large' ? '100px' : '70px',
+        height: size === 'large' ? '100px' : '70px',
+        background: `radial-gradient(circle at bottom left, ${color}15, transparent 60%)`,
+        opacity: 0.3,
+        filter: 'blur(15px)'
       }} />
       <div style={{
         display: 'flex',
@@ -102,19 +118,21 @@ const Card: React.FC<CardProps> = ({
         <div style={{ flex: 1 }}>
           <h3 style={{ 
             margin: '0 0 12px 0',
-            color: size === 'large' ? '#555' : '#333',
+            color: '#64748b',
             fontSize: titleSize,
-            fontWeight: size === 'large' ? '400' : '500',
+            fontWeight: size === 'large' ? '600' : '700',
             letterSpacing: size === 'large' ? 'normal' : '-0.01em',
-            fontFamily: 'Assistant, sans-serif'
+            fontFamily: 'Assistant, sans-serif',
+            textShadow: 'none'
           }}>{title}</h3>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
             <span style={{ 
               fontSize: valueSize, 
-              fontWeight: size === 'large' ? '700' : '600', 
+              fontWeight: size === 'large' ? '800' : '700', 
               color: color,
               letterSpacing: '-0.02em',
-              fontFamily: 'Assistant, sans-serif'
+              fontFamily: 'Assistant, sans-serif',
+              textShadow: `0 2px 12px ${color}60`
             }}>
               ₪{formatNumber(value || 0)}
             </span>
@@ -143,14 +161,18 @@ const Card: React.FC<CardProps> = ({
           </div>
         </div>
         <div style={{
-          backgroundColor: color + '20',
+          background: `linear-gradient(135deg, ${color}40 0%, ${color}25 100%)`,
           borderRadius: iconBorderRadius,
           padding: iconPadding,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          boxShadow: `0 6px 20px ${color}40`,
+          border: `1px solid ${color}50`,
+          position: 'relative',
+          zIndex: 1
         }}>
-          <Icon sx={{ fontSize: iconSize, color: color }} />
+          <Icon sx={{ fontSize: iconSize, color: color, filter: `drop-shadow(0 2px 8px ${color}60)` }} />
         </div>
       </div>
     </div>

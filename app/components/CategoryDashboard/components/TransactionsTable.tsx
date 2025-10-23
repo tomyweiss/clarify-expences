@@ -6,6 +6,8 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { formatNumber } from '../utils/formatUtils';
 import { dateUtils } from '../utils/dateUtils';
+import { useCategories } from '../utils/useCategories';
+import { TABLE_HEADER_CELL_STYLE, TABLE_BODY_CELL_STYLE, TABLE_ROW_HOVER_STYLE, TABLE_ROW_HOVER_BACKGROUND } from '../utils/tableStyles';
 
 interface Transaction {
   name: string;
@@ -27,23 +29,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
   const [editPrice, setEditPrice] = React.useState<string>('');
   const [editCategory, setEditCategory] = React.useState<string>('');
-  const [availableCategories, setAvailableCategories] = React.useState<string[]>([]);
-
-  // Fetch available categories when component mounts
-  React.useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch('/api/get_all_categories');
-        if (response.ok) {
-          const categories = await response.json();
-          setAvailableCategories(categories);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
-    fetchCategories();
-  }, []);
+  const { categories: availableCategories } = useCategories();
 
   const handleEditClick = (transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -97,17 +83,25 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
   }
 
   return (
-    <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: '16px' }}>
+    <Paper sx={{ 
+      width: '100%', 
+      overflow: 'hidden', 
+      borderRadius: '24px',
+      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
+      backdropFilter: 'blur(20px)',
+      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
+      border: '1px solid rgba(148, 163, 184, 0.2)'
+    }}>
       <Table
         onClick={handleTableClick}
       >
         <TableHead>
           <TableRow>
-            <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Description</TableCell>
-            <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Category</TableCell>
-            <TableCell align="right" style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Amount</TableCell>
-            <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Date</TableCell>
-            <TableCell align="right" style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Actions</TableCell>
+            <TableCell style={TABLE_HEADER_CELL_STYLE}>Description</TableCell>
+            <TableCell style={TABLE_HEADER_CELL_STYLE}>Category</TableCell>
+            <TableCell align="right" style={TABLE_HEADER_CELL_STYLE}>Amount</TableCell>
+            <TableCell style={TABLE_HEADER_CELL_STYLE}>Date</TableCell>
+            <TableCell align="right" style={TABLE_HEADER_CELL_STYLE}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -115,12 +109,18 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
             <TableRow 
               key={index}
               onClick={() => handleRowClick(transaction)}
-              style={{ cursor: 'pointer' }}
+              style={TABLE_ROW_HOVER_STYLE}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = TABLE_ROW_HOVER_BACKGROUND;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
             >
-              <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
+              <TableCell style={TABLE_BODY_CELL_STYLE}>
                 {transaction.name}
               </TableCell>
-              <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
+              <TableCell style={TABLE_BODY_CELL_STYLE}>
                 {editingTransaction?.identifier === transaction.identifier ? (
                   <Autocomplete
                     value={editCategory}
@@ -168,7 +168,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                       textAlign: 'center',
                       backgroundColor: 'rgba(59, 130, 246, 0.1)',
                       color: '#3b82f6',
-                      fontWeight: '500',
+                      fontWeight: '400',
                       fontSize: '13px'
                     }}
                     onClick={(e) => {
@@ -192,8 +192,9 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
               <TableCell 
                 align="right" 
                 style={{ 
-                  color: transaction.price < 0 ? '#F87171' : '#4ADE80',
-                  borderBottom: '1px solid #e2e8f0'
+                  ...TABLE_BODY_CELL_STYLE,
+                  color: transaction.price < 0 ? '#ef4444' : '#10b981',
+                  fontWeight: 600
                 }}
               >
                 {editingTransaction?.identifier === transaction.identifier ? (
@@ -221,10 +222,10 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                   `₪${formatNumber(Math.abs(transaction.price))}`
                 )}
               </TableCell>
-              <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
+              <TableCell style={{ ...TABLE_BODY_CELL_STYLE, color: '#64748b' }}>
                 {dateUtils.formatDate(transaction.date)}
               </TableCell>
-              <TableCell align="right" style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <TableCell align="right" style={TABLE_BODY_CELL_STYLE}>
                 {editingTransaction?.identifier === transaction.identifier ? (
                   <>
                     <IconButton 

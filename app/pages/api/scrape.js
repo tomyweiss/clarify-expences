@@ -1,7 +1,8 @@
 import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
 import crypto from 'crypto';
 import { getDB } from './db';
-import { BANK_VENDORS } from '../../utils/constants';
+import { BANK_VENDORS, BEINLEUMI_GROUP_VENDORS } from '../../utils/constants';
+import { withAuth } from './middleware/auth';
 
 async function insertTransaction(txn, client, companyId, isBank) {
   const uniqueId = `${txn.identifier}-${companyId}-${txn.processedDate}-${txn.description}`;
@@ -98,7 +99,7 @@ async function applyCategorizationRules(client) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -117,30 +118,90 @@ export default async function handler(req, res) {
     }
 
     // Prepare credentials based on company type
-    const scraperCredentials = options.companyId === 'visaCal' || options.companyId === 'max'
-      ? {
-          username: credentials.username,
-          password: credentials.password
-        }
-      : BANK_VENDORS.includes(options.companyId)
-      ? {
-          username: credentials.username,
-          password: credentials.password,
-          bankAccountNumber: credentials.bankAccountNumber || undefined
-        }
-      : {
-          id: credentials.id,
-          card6Digits: credentials.card6Digits,
-          password: credentials.password
-        };
+    // IMPORTANT: All values must be strings for Puppeteer's page.type() method
+    let scraperCredentials;
+    
+    if (options.companyId === 'visaCal' || options.companyId === 'max') {
+      // VisaCal and Max use username/password
+      scraperCredentials = {
+        username: String(credentials.username || ''),
+        password: String(credentials.password || '')
+      };
+    } else if (BEINLEUMI_GROUP_VENDORS.includes(options.companyId)) {
+      // Beinleumi Group banks (otsarHahayal, beinleumi, massad, pagi) use username/password only
+      // Note: These banks use the ID as 'username', not separate id/num fields
+      const bankUsername = credentials.username || credentials.id || credentials.id_number || '';
+      
+      scraperCredentials = {
+        username: String(bankUsername),
+        password: String(credentials.password || '')
+      };
+      
+      // Validate required fields
+      if (!scraperCredentials.username || scraperCredentials.username === 'undefined') {
+        throw new Error('Bank username/ID is required for Beinleumi Group bank scraping');
+      }
+    } else if (BANK_VENDORS.includes(options.companyId)) {
+      // Standard banks (discount, hapoalim, leumi, etc.) use id/password/num
+      const bankId = credentials.username || credentials.id || credentials.id_number || '';
+      const bankNum = credentials.bankAccountNumber || credentials.bank_account_number || '';
+      
+      scraperCredentials = {
+        id: String(bankId),
+        password: String(credentials.password || ''),
+        num: String(bankNum)
+      };
+      
+      // Validate required fields for standard banks
+      if (!scraperCredentials.id || scraperCredentials.id === 'undefined') {
+        throw new Error('Bank ID is required for bank scraping');
+      }
+      if (!scraperCredentials.num || scraperCredentials.num === 'undefined') {
+        throw new Error('Bank account number is required for bank scraping');
+      }
+    } else {
+      // Credit cards (isracard, amex, etc.)
+      scraperCredentials = {
+        id: String(credentials.id || credentials.id_number || credentials.username || ''),
+        card6Digits: String(credentials.card6Digits || credentials.card6_digits || ''),
+        password: String(credentials.password || '')
+      };
+    }
+    
 
-    const scraper = createScraper({
+    const scraperOptions = {
       ...options,
       companyId,
       startDate: new Date(options.startDate),
       showBrowser: isBank,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+      verbose: true,
+      timeout: 120000, // 120 seconds timeout for each operation (increased)
+      executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--window-size=1920,1080',
+        '--disable-web-security' // Sometimes helps with iframe issues
+      ],
+      // Add a slight delay to help with timing issues
+      defaultTimeout: 30000
+    };
+    
+    // SECURITY: Removed sensitive logging
+    // Validate that all credential values are strings and not undefined
+    for (const [key, value] of Object.entries(scraperCredentials)) {
+      if (typeof value !== 'string') {
+        throw new Error(`Credential ${key} must be a string, got ${typeof value}`);
+      }
+      if (value === 'undefined' || value === 'null') {
+        throw new Error(`Credential ${key} has invalid value`);
+      }
+    }
+    
+    const scraper = createScraper(scraperOptions);
 
     // Insert audit row: started
     const triggeredBy = credentials?.username || credentials?.id || credentials?.nickname || 'unknown';
@@ -157,20 +218,41 @@ export default async function handler(req, res) {
     );
     const auditId = insertAudit.rows[0]?.id;
 
-    const result = await scraper.scrape(scraperCredentials);
-    
-    console.log('Scraping result:');
-    console.log(JSON.stringify(result, null, 2));
-    
-    if (!result.success) {
-      // Update audit as failed
+    // SECURITY: Removed sensitive logging
+    let result;
+    try {
+      result = await scraper.scrape(scraperCredentials);
+    } catch (scrapeError) {
       if (auditId) {
         await client.query(
           `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
-          ['failed', result.errorType || 'Scraping failed', auditId]
+          ['failed', scrapeError.message || 'Scraper exception', auditId]
         );
       }
-      throw new Error(result.errorType || 'Scraping failed');
+      throw new Error(`Scraper exception: ${scrapeError.message}`);
+    }
+    
+    // SECURITY: Removed sensitive result logging
+    
+    if (!result.success) {
+      // Update audit as failed with detailed error information
+      const errorMsg = result.errorMessage || result.errorType || 'Scraping failed';
+      const errorDetails = {
+        errorType: result.errorType,
+        errorMessage: result.errorMessage,
+        companyId: options.companyId,
+        ...(result.errorDetails && { errorDetails: result.errorDetails })
+      };
+      // SECURITY: Log errors without sensitive details
+      console.error('Scraping failed:', result.errorType || 'GENERIC');
+      
+      if (auditId) {
+        await client.query(
+          `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
+          ['failed', errorMsg, auditId]
+        );
+      }
+      throw new Error(`${result.errorType || 'GENERIC'}: ${errorMsg}`);
     }
     
     let bankTransactions = 0;
@@ -221,4 +303,7 @@ export default async function handler(req, res) {
   } finally {
     client.release();
   }
-} 
+}
+
+// Export handler with authentication middleware
+export default withAuth(handler); 

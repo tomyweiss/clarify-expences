@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   IconButton,
   Table,
@@ -15,16 +14,14 @@ import {
   MenuItem,
   styled,
   Typography,
-  Divider,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SyncIcon from '@mui/icons-material/Sync';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import ScrapeModal from './ScrapeModal';
-import { CREDIT_CARD_VENDORS, BANK_VENDORS } from '../utils/constants';
+import { CREDIT_CARD_VENDORS, BANK_VENDORS, BEINLEUMI_GROUP_VENDORS, STANDARD_BANK_VENDORS } from '../utils/constants';
 import { dateUtils } from './CategoryDashboard/utils/dateUtils';
 import { useNotification } from './NotificationContext';
 import ModalHeader from './ModalHeader';
@@ -37,8 +34,12 @@ interface Account {
   card6_digits?: string;
   bank_account_number?: string;
   nickname?: string;
-  password?: string;
+  // SECURITY: password field removed - fetched separately when needed
   created_at: string;
+}
+
+interface AccountWithPassword extends Account {
+  password: string;
 }
 
 interface AccountsModalProps {
@@ -47,8 +48,13 @@ interface AccountsModalProps {
 }
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  transition: 'all 0.2s ease-in-out',
   '&:nth-of-type(odd)': {
-    backgroundColor: theme.palette.action.hover,
+    backgroundColor: 'rgba(248, 250, 252, 0.5)',
+  },
+  '&:hover': {
+    background: 'linear-gradient(135deg, rgba(96, 165, 250, 0.05) 0%, rgba(167, 139, 250, 0.05) 100%)',
+    transform: 'scale(1.005)',
   },
 }));
 
@@ -56,12 +62,16 @@ const SectionHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  padding: '16px 0',
-  marginBottom: '16px',
-  borderBottom: '2px solid #e2e8f0',
+  padding: '20px 0',
+  marginBottom: '20px',
+  borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+  background: 'linear-gradient(90deg, rgba(96, 165, 250, 0.05) 0%, transparent 100%)',
+  borderRadius: '8px',
+  paddingLeft: '12px',
   '& .MuiTypography-root': {
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: '18px',
+    letterSpacing: '-0.01em',
   },
 }));
 
@@ -78,9 +88,9 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isScrapeModalOpen, setIsScrapeModalOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<AccountWithPassword | null>(null);
   const { showNotification } = useNotification();
-  const [newAccount, setNewAccount] = useState<Account>({
+  const [newAccount, setNewAccount] = useState({
     vendor: 'isracard',
     username: '',
     id_number: '',
@@ -106,7 +116,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
         throw new Error('Failed to fetch accounts');
       }
       const data = await response.json();
-      console.log('Fetched accounts:', data);
+      // SECURITY: Removed console.log to prevent sensitive data logging
       setAccounts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -135,7 +145,14 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
         setError('Username is not used for Isracard and American Express');
         return;
       }
-    } else if (BANK_VENDORS.includes(newAccount.vendor)) {
+    } else if (BEINLEUMI_GROUP_VENDORS.includes(newAccount.vendor)) {
+      // Beinleumi Group banks only need username/ID, no account number
+      if (!newAccount.username) {
+        setError('Username/ID is required for Beinleumi Group banks');
+        return;
+      }
+    } else if (STANDARD_BANK_VENDORS.includes(newAccount.vendor)) {
+      // Standard banks need both username and account number
       if (!newAccount.username) {
         setError('Username is required for bank accounts');
         return;
@@ -201,39 +218,27 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
     }
   };
 
-  const handleScrape = (account: Account) => {
-    console.log('Selected account for scraping:', account);
-    const initialConfig = {
-      options: {
-        companyId: account.vendor,
-        startDate: new Date(),
-        combineInstallments: false,
-        showBrowser: true,
-        additionalTransactionInformation: true
-      },
-      credentials: {
-        id: account.id_number,
-        card6Digits: account.card6_digits,
-        password: account.password,
-        username: account.username,
-        bankAccountNumber: account.bank_account_number,
-        nickname: account.nickname
+  const handleScrape = async (account: Account) => {
+    try {
+      // SECURITY: Fetch full credentials including password from secure endpoint
+      const response = await fetch(`/api/credentials/${account.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch account credentials');
       }
-    };
-    setSelectedAccount(account);
-    setIsScrapeModalOpen(true);
+      const accountWithPassword: AccountWithPassword = await response.json();
+      
+      setSelectedAccount(accountWithPassword);
+      setIsScrapeModalOpen(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load credentials for scraping');
+      showNotification('Failed to load credentials for scraping', 'error');
+    }
   };
 
   const handleScrapeSuccess = () => {
     showNotification('Scraping process completed successfully!', 'success');
     window.dispatchEvent(new CustomEvent('dataRefresh'));
   };
-
-  useEffect(() => {
-    if (selectedAccount) {
-      console.log('Selected account changed:', selectedAccount);
-    }
-  }, [selectedAccount]);
 
   // Separate accounts by type
   const bankAccounts = accounts.filter(account => BANK_VENDORS.includes(account.vendor));
@@ -255,29 +260,100 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
     }
 
     return (
+      <Box sx={{
+        borderRadius: '20px',
+        overflow: 'hidden',
+        border: '1px solid rgba(148, 163, 184, 0.15)',
+        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
+        backdropFilter: 'blur(10px)'
+      }}>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Nickname</TableCell>
-            <TableCell>Vendor</TableCell>
-            <TableCell>{type === 'bank' ? 'Username' : 'ID Number'}</TableCell>
+            <TableCell style={{
+              color: '#475569',
+              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              fontWeight: 600,
+              fontSize: '13px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              padding: '16px'
+            }}>Nickname</TableCell>
+            <TableCell style={{
+              color: '#475569',
+              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              fontWeight: 600,
+              fontSize: '13px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              padding: '16px'
+            }}>Vendor</TableCell>
+            <TableCell style={{
+              color: '#475569',
+              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              fontWeight: 600,
+              fontSize: '13px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              padding: '16px'
+            }}>{type === 'bank' ? 'Username' : 'ID Number'}</TableCell>
             {type === 'bank' ? (
-              <TableCell>Account Number</TableCell>
+              <TableCell style={{
+                color: '#475569',
+                borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+                fontWeight: 600,
+                fontSize: '13px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                padding: '16px'
+              }}>Account Number</TableCell>
             ) : (
-              <TableCell>Card Last Digits</TableCell>
+              <TableCell style={{
+                color: '#475569',
+                borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+                fontWeight: 600,
+                fontSize: '13px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                padding: '16px'
+              }}>Card Last Digits</TableCell>
             )}
-            <TableCell>Created At</TableCell>
-            <TableCell align="right">Actions</TableCell>
+            <TableCell style={{
+              color: '#475569',
+              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              fontWeight: 600,
+              fontSize: '13px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              padding: '16px'
+            }}>Created At</TableCell>
+            <TableCell align="right" style={{
+              color: '#475569',
+              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              fontWeight: 600,
+              fontSize: '13px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              padding: '16px'
+            }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {accounts.map((account) => (
             <StyledTableRow key={account.id}>
-              <TableCell>{account.nickname}</TableCell>
-              <TableCell>{account.vendor}</TableCell>
-              <TableCell>{account.username || account.id_number}</TableCell>
-              <TableCell>{type === 'bank' ? account.bank_account_number : (account.card6_digits || '-')}</TableCell>
-              <TableCell>{dateUtils.formatDate(account.created_at)}</TableCell>
+              <TableCell style={{ color: '#1e293b' }}>{account.nickname}</TableCell>
+              <TableCell style={{ color: '#475569' }}>{account.vendor}</TableCell>
+              <TableCell style={{ color: '#475569' }}>{account.username || account.id_number}</TableCell>
+              <TableCell style={{ color: '#475569' }}>{type === 'bank' ? account.bank_account_number : (account.card6_digits || '-')}</TableCell>
+              <TableCell style={{ color: '#64748b' }}>{dateUtils.formatDate(account.created_at)}</TableCell>
               <TableCell align="right">
                 <IconButton
                   onClick={() => handleScrape(account)}
@@ -306,6 +382,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
           ))}
         </TableBody>
       </Table>
+      </Box>
     );
   };
 
@@ -322,6 +399,21 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
         }} 
         maxWidth="md" 
         fullWidth
+        PaperProps={{
+          style: {
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '28px',
+            boxShadow: '0 24px 64px rgba(0, 0, 0, 0.15)',
+            border: '1px solid rgba(148, 163, 184, 0.2)'
+          }
+        }}
+        BackdropProps={{
+          style: {
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(8px)'
+          }
+        }}
       >
         <ModalHeader 
           title="Accounts Management" 
@@ -348,15 +440,17 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             </Button>
           }
         />
-        <DialogContent style={{ padding: '0 24px 24px' }}>
+        <DialogContent style={{ padding: '0 32px 32px', color: '#1e293b' }}>
           {error && (
             <div style={{
-              backgroundColor: '#fee2e2',
-              border: '1px solid #fecaca',
-              color: '#dc2626',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#1e293b',
               padding: '16px',
-              borderRadius: '8px',
-              marginBottom: '16px'
+              borderRadius: '16px',
+              marginBottom: '16px',
+              boxShadow: '0 8px 24px rgba(239, 68, 68, 0.3)',
+              backdropFilter: 'blur(10px)'
             }}>
               {error}
             </div>
@@ -408,6 +502,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
                 <MenuItem value="otsarHahayal">Otsar Hahayal</MenuItem>
                 <MenuItem value="beinleumi">Beinleumi</MenuItem>
                 <MenuItem value="massad">Massad</MenuItem>
+                <MenuItem value="pagi">Pagi</MenuItem>
                 <MenuItem value="yahav">Yahav</MenuItem>
                 <MenuItem value="union">Union Bank</MenuItem>
               </TextField>
@@ -430,14 +525,26 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
                   required
                 />
               )}
-              {BANK_VENDORS.includes(newAccount.vendor) && (
+              {STANDARD_BANK_VENDORS.includes(newAccount.vendor) && (
                 <TextField
                   fullWidth
                   label="Bank Account Number"
                   value={newAccount.bank_account_number}
-                  onChange={(e) => {debugger; setNewAccount({ ...newAccount, bank_account_number: e.target.value })}}
+                  onChange={(e) => setNewAccount({ ...newAccount, bank_account_number: e.target.value })}
                   margin="normal"
                   required
+                  helperText="Required for standard banks"
+                />
+              )}
+              {BEINLEUMI_GROUP_VENDORS.includes(newAccount.vendor) && (
+                <TextField
+                  fullWidth
+                  label="Username / ID"
+                  value={newAccount.username}
+                  onChange={(e) => setNewAccount({ ...newAccount, username: e.target.value })}
+                  margin="normal"
+                  required
+                  helperText="Your ID number (no account number needed for this bank)"
                 />
               )}
               {(newAccount.vendor === 'isracard' || newAccount.vendor === 'amex') && (
