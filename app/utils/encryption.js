@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 
 const ENCRYPTION_KEY = process.env.CLARIFY_ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY) throw new Error('CLARIFY_ENCRYPTION_KEY environment variable is required');
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
