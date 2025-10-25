@@ -15,16 +15,31 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
 const MetricCard = styled(Paper)(({ theme }) => ({
-  backgroundColor: '#ffffff',
-  borderRadius: '16px',
-  padding: '12px',
-  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-  border: '1px solid rgba(0, 0, 0, 0.06)',
-  transition: 'all 0.2s ease-in-out',
+  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+  backdropFilter: 'blur(20px)',
+  borderRadius: '20px',
+  padding: '20px',
+  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+  border: '1px solid rgba(255, 255, 255, 0.15)',
+  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   cursor: 'pointer',
+  position: 'relative',
+  overflow: 'hidden',
   '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+    transform: 'translateY(-4px) scale(1.02)',
+    boxShadow: '0 16px 48px rgba(96, 165, 250, 0.4)',
+    borderColor: 'rgba(96, 165, 250, 0.5)',
+    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.1) 100%)',
+  },
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '120px',
+    height: '120px',
+    background: 'radial-gradient(circle at top right, rgba(96, 165, 250, 0.25), transparent 70%)',
+    filter: 'blur(20px)',
   },
 }));
 
@@ -32,8 +47,8 @@ const HeaderBox = styled(Box)({
   display: 'flex',
   justifyContent: 'flex-end',
   alignItems: 'center',
-  marginBottom: '8px',
-  padding: '0 2px',
+  marginBottom: '12px',
+  padding: '0 4px',
 });
 
 const MetricItem: React.FC<{ 
@@ -53,13 +68,17 @@ const MetricItem: React.FC<{
         gap: '8px'
       }}>
         <div style={{
-          backgroundColor: `${color}15`,
-          borderRadius: '10px',
-          padding: '8px',
+          background: `linear-gradient(135deg, ${color}25 0%, ${color}15 100%)`,
+          borderRadius: '12px',
+          padding: '10px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '2px'
+          marginBottom: '4px',
+          boxShadow: `0 4px 12px ${color}20`,
+          border: `1px solid ${color}20`,
+          position: 'relative',
+          zIndex: 1
         }}>
           {React.cloneElement(icon as React.ReactElement, { 
             sx: { 
@@ -70,26 +89,27 @@ const MetricItem: React.FC<{
         </div>
         <div>
           <h3 style={{ 
-            margin: '0 0 2px 0', 
-            fontSize: '12px', 
-            color: '#666',
-            fontWeight: 500,
+            margin: '0 0 4px 0', 
+            fontSize: '11px', 
+            color: 'rgba(255, 255, 255, 0.6)',
+            fontWeight: 600,
             textTransform: 'uppercase',
-            letterSpacing: '0.5px'
+            letterSpacing: '1px'
           }}>{title}</h3>
           <p style={{ 
             margin: 0, 
-            fontSize: '20px', 
+            fontSize: '24px', 
             color: color,
             fontWeight: 700,
-            lineHeight: '1.1'
+            lineHeight: '1.1',
+            textShadow: `0 2px 8px ${color}40`
           }}>{value}</p>
           {subtitle && (
             <p style={{ 
-              margin: '2px 0 0 0', 
+              margin: '4px 0 0 0', 
               fontSize: '11px', 
-              color: '#888',
-              fontWeight: 400
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontWeight: 500
             }}>{subtitle}</p>
           )}
         </div>
@@ -122,17 +142,26 @@ const MetricsPanel: React.FC = () => {
   }, []);
 
   return (
-    <Box sx={{ flexGrow: 1, mb: 3, mt: 1 }}>
+    <Box sx={{ flexGrow: 1, mb: 4, mt: 2, pt: '96px' }}>
       <HeaderBox>
 
         <IconButton
           onClick={() => setOpen(!open)}
           size="small"
           sx={{
-            color: '#666',
-            transition: 'all 0.2s ease-in-out',
+            color: 'rgba(255, 255, 255, 0.7)',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.06)',
+              background: 'rgba(96, 165, 250, 0.2)',
+              borderColor: 'rgba(96, 165, 250, 0.4)',
+              color: '#ffffff',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
             },
           }}
         >

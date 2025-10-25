@@ -1,17 +1,68 @@
 import React from 'react';
 import IconButton from '@mui/material/IconButton';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import Button from '@mui/material/Button';
 import { ResponseData, Expense, ModalData } from './types';
 import { useCategoryIcons, useCategoryColors } from './utils/categoryUtils';
 import Card from './components/Card';
 import ExpensesModal from './components/ExpensesModal';
-import MetricsPanel from './components/MetricsPanel';
 import TransactionsTable from './components/TransactionsTable';
+
+// Common styles
+const BUTTON_STYLE = {
+  background: 'rgba(255, 255, 255, 0.8)',
+  backdropFilter: 'blur(10px)',
+  padding: '14px',
+  borderRadius: '16px',
+  border: '1px solid rgba(148, 163, 184, 0.2)',
+  color: '#475569',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
+};
+
+const HOVER_BUTTON_STYLE = {
+  transform: 'translateY(-2px) scale(1.05)',
+  boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
+  background: 'rgba(96, 165, 250, 0.15)',
+  color: '#3b82f6'
+};
+
+const SELECT_STYLE = {
+  padding: '14px 28px',
+  borderRadius: '16px',
+  border: '1px solid rgba(148, 163, 184, 0.2)',
+  background: 'rgba(255, 255, 255, 0.8)',
+  backdropFilter: 'blur(10px)',
+  color: '#1e293b',
+  fontSize: '15px',
+  fontWeight: '600',
+  cursor: 'pointer',
+  outline: 'none',
+  textAlign: 'right' as const,
+  direction: 'rtl' as const,
+  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+};
+
+// Helper function to fetch all transactions for a month
+const fetchAllTransactions = async (month: string) => {
+  const url = new URL("/api/category_expenses", window.location.origin);
+  url.searchParams.append("month", month);
+  url.searchParams.append("all", "true");
+  
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  return response.json();
+};
 
 const CategoryDashboard: React.FC = () => {
   const [sumPerCategory, setSumPerCategory] = React.useState<ResponseData[]>([]);
@@ -43,20 +94,10 @@ const CategoryDashboard: React.FC = () => {
   }, [selectedYear, selectedMonth]);
 
   const handleDataRefresh = React.useCallback(() => {
-    console.log('handleDataRefresh called with:', { 
-      selectedYear: currentYearRef.current, 
-      selectedMonth: currentMonthRef.current 
-    });
-    // Only refresh if we have valid year and month values
-    if (currentYearRef.current && currentMonthRef.current && 
-        currentYearRef.current !== '' && currentMonthRef.current !== '') {
-      console.log('Calling fetchData with:', `${currentYearRef.current}-${currentMonthRef.current}`);
-      // Use setTimeout to ensure fetchData is available
+    if (currentYearRef.current && currentMonthRef.current) {
       setTimeout(() => {
         fetchData(`${currentYearRef.current}-${currentMonthRef.current}`);
       }, 0);
-    } else {
-      console.log('Invalid year or month values, skipping refresh');
     }
   }, []);
 
@@ -152,15 +193,11 @@ const CategoryDashboard: React.FC = () => {
   const fetchData = async (month: string) => {
     try {
       const url = new URL("/api/month_by_categories", window.location.origin);
-      const params = new URLSearchParams();
-      params.append("month", month);
-      url.search = params.toString();
+      url.searchParams.append("month", month);
 
       const response = await fetch(url.toString(), {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" }
       });
 
       if (!response.ok) {
@@ -171,24 +208,7 @@ const CategoryDashboard: React.FC = () => {
       setSumPerCategory(data);
       
       // Fetch all transactions to calculate income and expenses properly
-      const allTransactionsURL = new URL("/api/category_expenses", window.location.origin);
-      const allTransactionsParams = new URLSearchParams();
-      allTransactionsParams.append("month", month);
-      allTransactionsParams.append("all", "true");
-      allTransactionsURL.search = allTransactionsParams.toString();
-      
-      const allTransactionsResponse = await fetch(allTransactionsURL.toString(), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!allTransactionsResponse.ok) {
-        throw new Error(`HTTP error! status: ${allTransactionsResponse.status}`);
-      }
-
-      const allTransactions = await allTransactionsResponse.json();
+      const allTransactions = await fetchAllTransactions(month);
       
       // Calculate total income: Bank category with positive values
       const totalIncome = allTransactions
@@ -201,21 +221,9 @@ const CategoryDashboard: React.FC = () => {
         .reduce((acc: number, transaction: any) => acc + Math.abs(transaction.price), 0);
       
       // Calculate credit card expenses: All transactions excluding Bank and Income categories
-      const creditCardTransactions = allTransactions.filter((transaction: any) => 
-        transaction.category !== 'Bank' && transaction.category !== 'Income'
-      );
-      
-      console.log('Credit card calculation debug:', {
-        allTransactionsCount: allTransactions.length,
-        creditCardTransactionsCount: creditCardTransactions.length,
-        creditCardTransactions: creditCardTransactions,
-        categories: creditCardTransactions.map((t: any) => ({ name: t.name, category: t.category, price: t.price }))
-      });
-      
-      const creditCardExpenses = creditCardTransactions
+      const creditCardExpenses = allTransactions
+        .filter((transaction: any) => transaction.category !== 'Bank' && transaction.category !== 'Income')
         .reduce((acc: number, transaction: any) => acc + Math.abs(transaction.price), 0);
-      
-      console.log('Credit card expenses total:', creditCardExpenses);
       
       setBankTransactions({ income: totalIncome, expenses: totalExpenses });
       setCreditCardTransactions(creditCardExpenses);
@@ -240,25 +248,8 @@ const CategoryDashboard: React.FC = () => {
   const handleBankTransactionsClick = async () => {
     setLoadingBankTransactions(true);
     try {
-      const url = new URL("/api/category_expenses", window.location.origin);
-      const params = new URLSearchParams();
       const fullMonth = `${selectedYear}-${selectedMonth}`;
-      params.append("month", fullMonth);
-      params.append("all", "true");
-      url.search = params.toString();
-      
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const allTransactions = await response.json();
+      const allTransactions = await fetchAllTransactions(fullMonth);
       
       // Filter for Bank category transactions (both positive and negative)
       const bankTransactions = allTransactions.filter((transaction: any) => 
@@ -287,27 +278,10 @@ const CategoryDashboard: React.FC = () => {
   };
 
   const handleTotalCreditCardExpensesClick = async () => {
+    setLoadingBankTransactions(true);
     try {
-      setLoadingBankTransactions(true);
-      const url = new URL("/api/category_expenses", window.location.origin);
-      const params = new URLSearchParams();
       const fullMonth = `${selectedYear}-${selectedMonth}`;
-      params.append("month", fullMonth);
-      params.append("all", "true");
-      url.search = params.toString();
-
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const allExpensesData = await response.json();
+      const allExpensesData = await fetchAllTransactions(fullMonth);
       
       // Filter out 'Bank' and 'Income' category transactions to get credit card expenses
       const creditCardData = allExpensesData.filter((transaction: any) => 
@@ -378,17 +352,10 @@ const CategoryDashboard: React.FC = () => {
   };
 
   const fetchTransactions = async () => {
+    setLoadingTransactions(true);
     try {
-      setLoadingTransactions(true);
-      const url = new URL("/api/category_expenses", window.location.origin);
-      const params = new URLSearchParams();
       const fullMonth = `${selectedYear}-${selectedMonth}`;
-      params.append("month", fullMonth);
-      params.append("all", "true");
-      url.search = params.toString();
-
-      const response = await fetch(url.toString());
-      const transactionsData = await response.json();
+      const transactionsData = await fetchAllTransactions(fullMonth);
       setTransactions(transactionsData);
     } catch (error) {
       console.error("Error fetching transactions data:", error);
@@ -452,102 +419,194 @@ const CategoryDashboard: React.FC = () => {
 
   return (
     <div style={{ 
-      padding: '24px',
-      maxWidth: '1400px',
-      margin: '32px auto 0',
-      background: '#f8f9fa',
-      minHeight: '100vh'
+      minHeight: '100vh',
+      position: 'relative',
+      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+      overflow: 'hidden'
     }}>
-      <MetricsPanel />
-      
+      {/* Animated background elements */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        marginBottom: '16px',
-        marginTop: '16px',
-        gap: '12px'
+        position: 'absolute',
+        top: '-10%',
+        right: '-5%',
+        width: '600px',
+        height: '600px',
+        background: 'radial-gradient(circle, rgba(96, 165, 250, 0.08) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        animation: 'float 20s ease-in-out infinite',
+        zIndex: 0
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '-10%',
+        left: '-5%',
+        width: '500px',
+        height: '500px',
+        background: 'radial-gradient(circle, rgba(167, 139, 250, 0.06) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        animation: 'float 25s ease-in-out infinite reverse',
+        zIndex: 0
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: '40%',
+        right: '20%',
+        width: '400px',
+        height: '400px',
+        background: 'radial-gradient(circle, rgba(236, 72, 153, 0.05) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        animation: 'float 30s ease-in-out infinite',
+        zIndex: 0
+      }} />
+      
+      {/* Main content container */}
+      <div style={{ 
+        padding: '24px 16px',
+        maxWidth: '1440px',
+        margin: '0 auto',
+        position: 'relative',
+        zIndex: 1
       }}>
-        <IconButton
-          onClick={handleRefreshClick}
-          style={{
-            backgroundColor: '#ffffff',
-            padding: '12px',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            color: '#888',
-            transition: 'all 0.2s ease-in-out'
-          }}
-        >
-          <RefreshIcon />
-        </IconButton>
-        <IconButton
-          onClick={handleTransactionsTableClick}
-          style={{
-            backgroundColor: showTransactionsTable ? '#edf2f7' : '#ffffff',
-            padding: '12px',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            color: showTransactionsTable ? '#333' : '#888',
-            transition: 'all 0.2s ease-in-out'
-          }}
-        >
-          <TableChartIcon />
-        </IconButton>
-        <select 
-          value={selectedYear}
-          onChange={handleYearChange}
-          style={{
-            padding: '12px 24px',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            backgroundColor: '#ffffff',
-            color: '#333',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            outline: 'none',
-            textAlign: 'right',
-            direction: 'rtl',
-            minWidth: '100px'
-          }}
-        >
-          {uniqueYears.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
-        <select 
-          value={selectedMonth}
-          onChange={handleMonthChange}
-          style={{
-            padding: '12px 24px',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            backgroundColor: '#ffffff',
-            color: '#333',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            outline: 'none',
-            textAlign: 'right',
-            direction: 'rtl',
-            minWidth: '120px'
-          }}
-        >
-          {uniqueMonths.map((month) => (
-            <option key={month} value={month}>
-              {new Date(`2024-${month}-01`).toLocaleDateString('default', { month: 'long' })}
-            </option>
-          ))}
-        </select>
-      </div>
 
+      {/* Hero Section */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '32px',
+        padding: '36px',
+        marginBottom: '90px',
+        marginTop: '40px',
+        marginLeft: '24px',
+        marginRight: '24px',
+        border: '1px solid rgba(148, 163, 184, 0.15)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '300px',
+          height: '300px',  
+          background: 'radial-gradient(circle, rgba(96, 165, 250, 0.1) 0%, transparent 70%)',
+          filter: 'blur(40px)',
+          zIndex: 0
+        }} />
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '24px'
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: '28px',
+              fontWeight: 700,
+              margin: 0,
+              background: 'linear-gradient(135deg, #64748b 0%, #94a3b8 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>Financial Overview</h1>
+          </div>
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            alignItems: 'center'
+          }}>
+            <IconButton
+              onClick={handleRefreshClick}
+              style={BUTTON_STYLE}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, HOVER_BUTTON_STYLE)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, BUTTON_STYLE)}
+            >
+              <RefreshIcon />
+            </IconButton>
+            <IconButton
+              onClick={handleTransactionsTableClick}
+              style={{
+                ...BUTTON_STYLE,
+                ...(showTransactionsTable ? {
+                  background: 'rgba(96, 165, 250, 0.2)',
+                  border: '1px solid rgba(96, 165, 250, 0.4)',
+                  color: '#3b82f6',
+                  boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)'
+                } : {})
+              }}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, {
+                transform: 'translateY(-2px) scale(1.05)',
+                boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
+                color: '#3b82f6'
+              })}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, {
+                transform: 'translateY(0) scale(1)',
+                color: showTransactionsTable ? '#3b82f6' : '#475569',
+                boxShadow: showTransactionsTable 
+                  ? '0 8px 24px rgba(96, 165, 250, 0.3)' 
+                  : '0 4px 16px rgba(0, 0, 0, 0.08)'
+              })}
+            >
+              <TableChartIcon />
+            </IconButton>
+            <select 
+              value={selectedYear}
+              onChange={handleYearChange}
+              style={{ ...SELECT_STYLE, minWidth: '120px' }}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
+                background: 'rgba(96, 165, 250, 0.15)'
+              })}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, {
+                transform: 'translateY(0)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+                background: 'rgba(255, 255, 255, 0.8)'
+              })}
+            >
+              {uniqueYears.map((year) => (
+                <option key={year} value={year} style={{ background: '#ffffff', color: '#1e293b' }}>
+                  {year}
+                </option>
+              ))}
+            </select>
+            <select 
+              value={selectedMonth}
+              onChange={handleMonthChange}
+              style={{ ...SELECT_STYLE, minWidth: '160px' }}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
+                background: 'rgba(96, 165, 250, 0.15)'
+              })}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, {
+                transform: 'translateY(0)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+                background: 'rgba(255, 255, 255, 0.8)'
+              })}
+            >
+              {uniqueMonths.map((month) => (
+                <option key={month} value={month} style={{ background: '#ffffff', color: '#1e293b' }}>
+                  {new Date(`2024-${month}-01`).toLocaleDateString('default', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+
+      {/* Summary Cards Section */}
       <div style={{ 
         display: 'flex',
-        gap: '24px',
-        marginBottom: '24px'
+        gap: '32px',
+        marginTop: '48px',
+        marginBottom: '40px'
       }}>
         <Card
           title="Bank Transactions" 
@@ -556,38 +615,74 @@ const CategoryDashboard: React.FC = () => {
           icon={MonetizationOnIcon}
           onClick={handleBankTransactionsClick}
           isLoading={loadingBankTransactions}
-          size="large"
+          size="medium"
           secondaryValue={bankTransactions.expenses}
           secondaryColor="#F87171"
         />
         <Card 
           title="Credit Card Transactions" 
           value={creditCardTransactions} 
-          color="#8B5CF6"
+          color="#3B82F6"
           icon={CreditCardIcon}
           onClick={handleTotalCreditCardExpensesClick}
           isLoading={loadingBankTransactions}
-          size="large"
+          size="medium"
         />
       </div>
 
       {showTransactionsTable ? (
-        <TransactionsTable 
-          transactions={transactions} 
-          isLoading={loadingTransactions}
-          onDelete={handleDeleteTransaction}
-          onUpdate={handleUpdateTransaction}
-        />
-      ) : (
-        <div style={{ 
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-          columnGap: '64px',
-          rowGap: '32px',
-          width: '100%',
-          maxWidth: '1360px',
-          boxSizing: 'border-box'
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '32px',
+          padding: '32px',
+          border: '1px solid rgba(148, 163, 184, 0.15)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)'
         }}>
+          <TransactionsTable 
+            transactions={transactions} 
+            isLoading={loadingTransactions}
+            onDelete={handleDeleteTransaction}
+            onUpdate={handleUpdateTransaction}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Categories Section Header */}
+          <div style={{
+            marginBottom: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px'
+          }}>
+            <div style={{
+              height: '2px',
+              flex: 1,
+              background: 'linear-gradient(90deg, transparent 0%, rgba(96, 165, 250, 0.3) 50%, transparent 100%)',
+              borderRadius: '2px'
+            }} />
+            <h2 style={{
+              fontSize: '14px',
+              fontWeight: 700,
+              margin: 0,
+              color: '#475569',
+              letterSpacing: '2px',
+              textTransform: 'uppercase'
+            }}>Expense Categories</h2>
+            <div style={{
+              height: '2px',
+              flex: 1,
+              background: 'linear-gradient(90deg, transparent 0%, rgba(96, 165, 250, 0.3) 50%, transparent 100%)',
+              borderRadius: '2px'
+            }} />
+          </div>
+          <div style={{ 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '32px',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
           {categories.length > 0 ? (
             categories.map((category, index) => (
               <Card
@@ -605,15 +700,30 @@ const CategoryDashboard: React.FC = () => {
             <div style={{
               gridColumn: '1 / -1',
               textAlign: 'center',
-              padding: '48px',
-              color: '#666',
-              fontSize: '16px'
+              padding: '64px',
+              background: 'rgba(255, 255, 255, 0.95)',
+              borderRadius: '24px',
+              border: '1px solid rgba(148, 163, 184, 0.15)',
+              backdropFilter: 'blur(20px)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)'
             }}>
-              No transactions found for {new Date(`2024-${selectedMonth}-01`).toLocaleDateString('default', { month: 'long' })} {selectedYear}
+              <div style={{
+                fontSize: '48px',
+                marginBottom: '16px',
+                opacity: 0.6
+              }}>📊</div>
+              <div style={{
+                color: '#475569',
+                fontSize: '18px',
+                fontWeight: 600
+              }}>No transactions found for {new Date(`2024-${selectedMonth}-01`).toLocaleDateString('default', { month: 'long' })} {selectedYear}</div>
             </div>
           )}
         </div>
+        </>
       )}
+      </div>
+    </div>
 
       {modalData && (
         <ExpensesModal

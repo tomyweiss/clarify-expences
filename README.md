@@ -1,187 +1,96 @@
-# Clarify – Know Where Your Money Goes
+# Clarify
 
-**Clarify** is a sleek, full-stack web app for managing your personal finances. It helps you keep track of income and expenses, automatically categorizes your transactions, and gives you monthly and yearly summaries—all in one clean dashboard.
+Personal finance management app for tracking income, expenses, and bank transactions with automatic categorization.
 
-Built with **Next.js**, **PostgreSQL**, and **Material-UI**, Clarify aims to create clarity and control over your money.
-
----
-
-## 🔑 Features
-
-### 💸 Smart Finance Tracking
-- **Bank account scraping** - Automatically import transactions from Israeli banks
-- **Manual transaction entry** - Add income and expenses manually with a unified interface
-- **Unified transaction model** - All financial movements (income and expenses) stored in one table
-- **Secure credential management** with end-to-end encryption
-- **Category-based tracking** for all expenses  
-- **Income management** with manual entry support
-- **Monthly & yearly summaries** to see your financial health at a glance  
-- **Saved accounts with nicknames** for quick access to your credentials
-- **Transaction management** with edit and delete capabilities
-
-### 📊 Analytics & Insights
-- Visual breakdown of your income and expenses  
-- Spending trends over time  
-- Overview of cash flow and category-wise distribution  
-- Total Income and Total Expenses widgets for quick overview
-
-### 🔒 Security Features
-- End-to-end encryption for sensitive credentials
-- Secure credential storage and management
-- Bank account credentials stored securely
-
-### 🎯 Account Management
-- **Organized account display** with separate sections for bank and credit card accounts
-- **Present account operations** with improved UI/UX
+**Stack:** Next.js · PostgreSQL · TypeScript · Material-UI
 
 ---
 
-## 🧰 Tech Stack
+## Features
 
-- **Frontend**: Next.js, React, TypeScript, Material-UI  
-- **Backend**: Next.js API Routes  
-- **Database**: PostgreSQL  
-- **Deployment**: Docker & Docker Compose  
-- **Bank Integration**: [`israeli-bank-scrapers`](https://github.com/eshaham/israeli-bank-scrapers)
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js (v20 or higher)  
-- PostgreSQL (v16 or higher)  
-- Docker & Docker Compose (optional, for container deployment)
+- 🏦 Automatic bank scraping (Israeli banks)
+- 📝 Manual transaction entry
+- 🔐 Password-protected with encrypted credentials (AES-256-GCM)
+- 📊 Category-based tracking and analytics
+- 🎯 Monthly/yearly financial summaries
+- ⚙️ Customizable categorization rules
 
 ---
 
-### Local Development
+## Setup
 
-1. **Clone the repository**
+**Prerequisites:** Node.js 20+, PostgreSQL 16+
+
+### Quick Start
+
+1. **Clone and install**
    ```bash
-   git clone https://github.com/clarify/clarify-expenses.git  
-   cd clarify-expenses
-   ```
-
-2. **Install dependencies**
-   ```bash
-   cd app  
+   git clone https://github.com/clarify/clarify-expenses.git
+   cd clarify-expenses/app
    npm install
    ```
 
-3. **Create a `.env` file** in the main directory:
+2. **Configure environment**
+   
+   Create `.env` in the root directory:
    ```env
-   CLARIFY_DB_USER=myuser  
-   CLARIFY_DB_HOST=localhost  
-   CLARIFY_DB_NAME=mydb  
-   CLARIFY_DB_PASSWORD=mypassword  
+   CLARIFY_DB_USER=myuser
+   CLARIFY_DB_HOST=localhost
+   CLARIFY_DB_NAME=mydb
+   CLARIFY_DB_PASSWORD=mypassword
    CLARIFY_DB_PORT=5432
-   CLARIFY_ENCRYPTION_KEY=your_encryption_key
+   CLARIFY_ENCRYPTION_KEY=<64-char-hex>
+   CLARIFY_AUTH_PASSWORD=<your-password>
+   ```
+   
+   Generate encryption key:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 
-4. **Start the development server**
+3. **Run**
    ```bash
    npm run dev
    ```
+   Open http://localhost:3000
 
----
+### Docker
 
-### 🐳 Docker Deployment
-
-1. Build and run the app using Docker:
-   ```bash
-   docker-compose up -d
-   ```
-
-2. Open your browser at:  
-   http://localhost:3000
-
----
-
-## 🗂 Project Structure
-
-```
-clarify-expenses/  
-├── app/                    # Next.js application  
-│   ├── components/         # Reusable UI components  
-│   │   ├── CategoryDashboard/  # Category management components  
-│   │   ├── AccountsModal/      # Account management modal  
-│   │   └── ScrapeModal/        # Transaction scraping modal  
-│   ├── pages/              # App pages and API routes  
-│   ├── public/             # Static files  
-│   └── styles/             # Global CSS and theme  
-├── db-init/                # PostgreSQL initialization scripts  
-├── docker-compose.yaml     # Docker config for services  
-└── README.md               # You're reading it
+```bash
+docker-compose up -d
 ```
 
 ---
 
-## 📦 Environment Variables
+## Environment Variables
 
-| Variable      | Description               |  
-|---------------|---------------------------|  
-| CLARIFY_DB_USER       | PostgreSQL username       |  
-| CLARIFY_DB_HOST       | PostgreSQL host           |  
-| CLARIFY_DB_NAME       | Database name             |  
-| CLARIFY_DB_PASSWORD   | PostgreSQL password       |  
-| CLARIFY_DB_PORT       | Database port (default: 5432) |
-| CLARIFY_ENCRYPTION_KEY| Key for credential encryption (required) |
+| Variable | Description |
+|----------|-------------|
+| `CLARIFY_DB_*` | PostgreSQL connection details |
+| `CLARIFY_ENCRYPTION_KEY` | 64-char hex key (use generator above) |
+| `CLARIFY_AUTH_PASSWORD` | App login password |
 
 ---
 
-## 🔄 Recent Updates
+## Screenshots
 
-### Bank Account Scraping Support
-- **Unified Transaction Model**: All financial data (income and expenses) now stored in a single `transactions` table
-- **Bank Account Integration**: Support for scraping transactions directly from Israeli bank accounts
-- **Simplified Dashboard**: Streamlined to show Total Income and Total Expenses with category breakdown
-- **Removed Legacy Components**: Eliminated separate income table and complex transaction categorization
-- **Clean Architecture**: Simplified database schema and API structure for better maintainability
-
----
-
-### 📸 Screenshots
-
-#### Dashboard Overview
-![Dashboard](app/public/screenshots/dashboard.png)
-
-#### Expenses
-![Transactions](app/public/screenshots/category_example.png)
-
-#### Category Management
-##### Merger
-![Analytics](app/public/screenshots/category_management.png)
-##### Rules
-![Analytics](app/public/screenshots/category_management_rules.png)
-
-#### Bank Transactions
-![Analytics](app/public/screenshots/bank_transactions.png)
-
-#### Account Management
-![Analytics](app/public/screenshots/account_management.png)
+<table>
+  <tr>
+    <td><img src="app/public/screenshots/dashboard.png" alt="Dashboard" width="400"/><br/><sub>Dashboard</sub></td>
+    <td><img src="app/public/screenshots/category_example.png" alt="Categories" width="400"/><br/><sub>Category View</sub></td>
+  </tr>
+  <tr>
+    <td><img src="app/public/screenshots/account_management.png" alt="Accounts" width="400"/><br/><sub>Account Management</sub></td>
+    <td><img src="app/public/screenshots/category_management.png" alt="Management" width="400"/><br/><sub>Category Management</sub></td>
+  </tr>
+</table>
 
 ---
 
-## 🤝 Contributing
+## License
 
-Contributions are welcome! If you have suggestions, bug reports, or feature requests, open an issue or submit a pull request.
+MIT License - See [LICENSE](LICENSE) file for details.
 
----
+## Credits
 
-## 📄 License
-
-This project is licensed under the MIT License. See the LICENSE file for more details.
-
----
-
-## 💬 Support
-
-For support, open an issue in this repository.
-
----
-
-## 🙌 Credits
-
-- Bank scraping integration powered by [`israeli-bank-scrapers`](https://github.com/eshaham/israeli-bank-scrapers)
+Bank integration: [`israeli-bank-scrapers`](https://github.com/eshaham/israeli-bank-scrapers)

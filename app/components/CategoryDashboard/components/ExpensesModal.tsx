@@ -1,6 +1,5 @@
 import React from 'react';
 import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
@@ -21,6 +20,8 @@ import dynamic from 'next/dynamic';
 const LineChart = dynamic(() => import('@mui/x-charts').then(m => m.LineChart), { ssr: false });
 import Box from '@mui/material/Box';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useCategories } from '../utils/useCategories';
+import { TABLE_HEADER_CELL_STYLE, TABLE_BODY_CELL_STYLE, TABLE_ROW_HOVER_STYLE, TABLE_ROW_HOVER_BACKGROUND } from '../utils/tableStyles';
 
 interface CategoryOverTimeData {
   year_month: string;
@@ -34,23 +35,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
   const [editPrice, setEditPrice] = React.useState<string>('');
   const [editCategory, setEditCategory] = React.useState<string>('');
-  const [availableCategories, setAvailableCategories] = React.useState<string[]>([]);
-
-  // Fetch available categories when component mounts
-  React.useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch('/api/get_all_categories');
-        if (response.ok) {
-          const categories = await response.json();
-          setAvailableCategories(categories);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
-    fetchCategories();
-  }, []);
+  const { categories: availableCategories } = useCategories();
 
   React.useEffect(() => {
     if (data.type) {
@@ -233,16 +218,32 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
       fullWidth
       PaperProps={{
         style: {
-          backgroundColor: '#ffffff',
-          borderRadius: '24px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '28px',
+          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.15)',
+          border: '1px solid rgba(148, 163, 184, 0.2)'
+        }
+      }}
+      BackdropProps={{
+        style: {
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(8px)'
         }
       }}
     >
       <ModalHeader title={data.type} onClose={onClose} />
-      <DialogContent style={{ padding: '24px' }}>
+      <DialogContent style={{ padding: '32px' }}>
         {data.type !== "Bank Transactions" && (
-          <Box sx={{ mb: 4 }}>
+          <Box sx={{ 
+            mb: 4, 
+            p: 3,
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.8) 100%)',
+            border: '1px solid rgba(148, 163, 184, 0.15)',
+            boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
+            backdropFilter: 'blur(10px)'
+          }}>
             <Box sx={{ width: '100%', overflow: 'hidden' }}>
               <LineChart
                 xAxis={[
@@ -304,16 +305,24 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
             </Box>
           </Box>
         )}
+        <Box sx={{
+          borderRadius: '20px',
+          overflow: 'hidden',
+          border: '1px solid rgba(148, 163, 184, 0.15)',
+          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
+          backdropFilter: 'blur(10px)'
+        }}>
         <Table
           onClick={handleTableClick}
         >
           <TableHead>
             <TableRow>
-              <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0', width: '200px', maxWidth: '200px' }}>Description</TableCell>
-              <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Category</TableCell>
-              <TableCell align="right" style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Amount</TableCell>
-              <TableCell style={{ color: '#555', borderBottom: '1px solid #e2e8f0' }}>Date</TableCell>
-              <TableCell align="center" style={{ color: '#555', borderBottom: '1px solid #e2e8f0', width: '120px' }}>Actions</TableCell>
+              <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '200px', maxWidth: '200px' }}>Description</TableCell>
+              <TableCell style={TABLE_HEADER_CELL_STYLE}>Category</TableCell>
+              <TableCell align="right" style={TABLE_HEADER_CELL_STYLE}>Amount</TableCell>
+              <TableCell style={TABLE_HEADER_CELL_STYLE}>Date</TableCell>
+              <TableCell align="center" style={{ ...TABLE_HEADER_CELL_STYLE, width: '120px' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -321,12 +330,18 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
               <TableRow 
                 key={index}
                 onClick={() => handleRowClick(expense)}
-                style={{ cursor: 'pointer' }}
+                style={TABLE_ROW_HOVER_STYLE}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = TABLE_ROW_HOVER_BACKGROUND;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
-                <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
+                <TableCell style={TABLE_BODY_CELL_STYLE}>
                   {expense.name}
                 </TableCell>
-                <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
+                <TableCell style={TABLE_BODY_CELL_STYLE}>
                   {editingExpense?.identifier === expense.identifier && 
                    editingExpense?.vendor === expense.vendor ? (
                     <Autocomplete
@@ -397,10 +412,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                   )}
                 </TableCell>
                 <TableCell align="right" style={{ 
+                  ...TABLE_BODY_CELL_STYLE,
                   color: data.type === "Bank Transactions" 
                     ? (expense.price >= 0 ? '#4ADE80' : '#F87171')
-                    : color, 
-                  borderBottom: '1px solid #e2e8f0',
+                    : color,
                   fontWeight: '600'
                 }}>
                   {editingExpense?.identifier === expense.identifier && 
@@ -435,10 +450,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                       : `₪${formatNumber(Math.abs(expense.price))}`
                   )}
                 </TableCell>
-                <TableCell style={{ color: '#333', borderBottom: '1px solid #e2e8f0' }}>
+                <TableCell style={TABLE_BODY_CELL_STYLE}>
                   {dateUtils.formatDate(expense.date)}
                 </TableCell>
-                <TableCell align="center" style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <TableCell align="center" style={TABLE_BODY_CELL_STYLE}>
                   {editingExpense?.identifier === expense.identifier && 
                    editingExpense?.vendor === expense.vendor ? (
                     <>
@@ -500,9 +515,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                   )}
                 </TableCell>
               </TableRow>
-            )) : <TableRow><TableCell colSpan={5} style={{ textAlign: 'center' }}>No data available</TableCell></TableRow>}
+              )) : <TableRow><TableCell colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>No data available</TableCell></TableRow>}
           </TableBody>
         </Table>
+        </Box>
       </DialogContent>
     </Dialog>
   );

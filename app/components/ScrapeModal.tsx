@@ -11,6 +11,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import { useNotification } from './NotificationContext';
 import ModalHeader from './ModalHeader';
+import { BEINLEUMI_GROUP_VENDORS, STANDARD_BANK_VENDORS } from '../utils/constants';
 
 interface ScraperConfig {
   options: {
@@ -134,10 +135,45 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           <MenuItem value="visaCal">VisaCal</MenuItem>
           <MenuItem value="amex">American Express</MenuItem>
           <MenuItem value="max">Max</MenuItem>
+          <MenuItem value="discount">Discount Bank</MenuItem>
+          <MenuItem value="hapoalim">Bank Hapoalim</MenuItem>
+          <MenuItem value="leumi">Bank Leumi</MenuItem>
+          <MenuItem value="otsarHahayal">Otsar Hahayal</MenuItem>
+          <MenuItem value="mizrahi">Mizrahi Bank</MenuItem>
+          <MenuItem value="beinleumi">Beinleumi Bank</MenuItem>
+          <MenuItem value="massad">Massad Bank</MenuItem>
+          <MenuItem value="pagi">Pagi Bank</MenuItem>
+          <MenuItem value="yahav">Yahav Bank</MenuItem>
+          <MenuItem value="union">Union Bank</MenuItem>
         </Select>
       </FormControl>
 
-      {config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
+      {BEINLEUMI_GROUP_VENDORS.includes(config.options.companyId) ? (
+        <>
+          <TextField
+            label="ID / Username"
+            value={config.credentials.id}
+            onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
+            fullWidth
+            helperText="Your ID number (no account number needed for this bank)"
+          />
+        </>
+      ) : STANDARD_BANK_VENDORS.includes(config.options.companyId) ? (
+        <>
+          <TextField
+            label="ID"
+            value={config.credentials.id}
+            onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Bank Account Number"
+            value={config.credentials.bankAccountNumber}
+            onChange={(e) => handleConfigChange('credentials.bankAccountNumber', e.target.value)}
+            fullWidth
+          />
+        </>
+      ) : config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
         <TextField
           label="Username"
           value={config.credentials.username}
