@@ -138,7 +138,7 @@ async function handler(req, res) {
       };
       
       // Validate required fields
-      if (!scraperCredentials.username || scraperCredentials.username === 'undefined') {
+      if (!scraperCredentials.username) {
         throw new Error('Bank username/ID is required for Beinleumi Group bank scraping');
       }
     } else if (BANK_VENDORS.includes(options.companyId)) {
