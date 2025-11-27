@@ -10,10 +10,10 @@ async function insertTransaction(txn, client, companyId, isBank) {
   hash.update(uniqueId);
   txn.identifier = hash.digest('hex');
 
-  let amount = txn.chargedAmount;
+  let amount = txn.originalAmount;
   let category = txn.category;
   if (!isBank){
-    amount = txn.chargedAmount * -1;
+    amount = txn.originalAmount * -1;
   }else{
     category = "Bank";
   }
@@ -169,6 +169,27 @@ async function handler(req, res) {
     }
     
 
+    // Determine Chrome/Chromium executable path based on environment
+    const getChromePath = () => {
+      // Check for environment variable first (Docker)
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        return process.env.PUPPETEER_EXECUTABLE_PATH;
+      }
+      
+      // Auto-detect based on platform
+      const platform = process.platform;
+      if (platform === 'linux') {
+        return '/usr/bin/chromium'; // Docker/Linux default
+      } else if (platform === 'darwin') {
+        return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'; // macOS
+      } else if (platform === 'win32') {
+        return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'; // Windows
+      }
+      
+      // Let puppeteer auto-detect
+      return undefined;
+    };
+
     const scraperOptions = {
       ...options,
       companyId,
@@ -176,7 +197,7 @@ async function handler(req, res) {
       showBrowser: isBank,
       verbose: true,
       timeout: 120000, // 120 seconds timeout for each operation (increased)
-      executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      executablePath: getChromePath(),
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
