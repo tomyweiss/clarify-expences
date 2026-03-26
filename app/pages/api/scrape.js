@@ -1,103 +1,19 @@
 import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
-import crypto from 'crypto';
+import puppeteerExtra from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { getDB } from './db';
 import { BANK_VENDORS, BEINLEUMI_GROUP_VENDORS } from '../../utils/constants';
 import { withAuth } from './middleware/auth';
+import {
+  insertTransaction,
+  applyCategorizationRules,
+  getChromePath,
+  getLaunchArgs,
+  createAuditEntry,
+  updateAuditEntry
+} from './scraper-utils';
 
-async function insertTransaction(txn, client, companyId, isBank) {
-  const uniqueId = `${txn.identifier}-${companyId}-${txn.processedDate}-${txn.description}`;
-  const hash = crypto.createHash('sha1');
-  hash.update(uniqueId);
-  txn.identifier = hash.digest('hex');
-
-  let amount = txn.originalAmount;
-  let category = txn.category;
-  if (!isBank){
-    amount = txn.originalAmount * -1;
-  }else{
-    category = "Bank";
-  }
-
-  try {
-    await client.query(
-      `INSERT INTO transactions (
-        identifier,
-        vendor,
-        date,
-        name,
-        price,
-        category,
-        type,
-        processed_date,
-        original_amount,
-        original_currency,
-        charged_currency,
-        memo,
-        status,
-        installments_number,
-        installments_total
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      ON CONFLICT (identifier, vendor) DO NOTHING`,
-      [
-        txn.identifier,
-        companyId,
-        new Date(txn.date),
-        txn.description,
-        amount,
-        category || 'N/A',
-        txn.type,
-        txn.processedDate,
-        txn.originalAmount,
-        txn.originalCurrency,
-        txn.chargedCurrency,
-        txn.memo,
-        txn.status,
-        txn.installments?.number,
-        txn.installments?.total
-      ]
-    );
-  } catch (error) {
-    console.error("Error inserting transaction:", error);
-    throw error;
-  }
-}
-
-async function applyCategorizationRules(client) {
-  try {
-    // Get all active categorization rules
-    const rulesResult = await client.query(`
-      SELECT id, name_pattern, target_category
-      FROM categorization_rules
-      WHERE is_active = true
-      ORDER BY id
-    `);
-    
-    const rules = rulesResult.rows;
-    let totalUpdated = 0;
-    
-    // Apply each rule to transactions that don't already have the target category
-    for (const rule of rules) {
-      const pattern = `%${rule.name_pattern}%`;
-      const updateResult = await client.query(`
-        UPDATE transactions 
-        SET category = $2
-        WHERE LOWER(name) LIKE LOWER($1) 
-        AND category != $2
-        AND category IS NOT NULL
-        AND category != 'Bank'
-        AND category != 'Income'
-      `, [pattern, rule.target_category]);
-      
-      totalUpdated += updateResult.rowCount;
-    }
-    
-    console.log(`Applied ${rules.length} rules to ${totalUpdated} transactions`);
-    return { rulesApplied: rules.length, transactionsUpdated: totalUpdated };
-  } catch (error) {
-    console.error('Error applying categorization rules:', error);
-    throw error;
-  }
-}
+puppeteerExtra.use(StealthPlugin());
 
 async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -105,6 +21,7 @@ async function handler(req, res) {
   }
 
   const client = await getDB();
+  let auditId;
   try {
     const { options, credentials } = req.body;
     const companyId = CompanyTypes[options.companyId];
@@ -120,7 +37,7 @@ async function handler(req, res) {
     // Prepare credentials based on company type
     // IMPORTANT: All values must be strings for Puppeteer's page.type() method
     let scraperCredentials;
-    
+
     if (options.companyId === 'visaCal' || options.companyId === 'max') {
       // VisaCal and Max use username/password
       scraperCredentials = {
@@ -131,12 +48,12 @@ async function handler(req, res) {
       // Beinleumi Group banks (otsarHahayal, beinleumi, massad, pagi) use username/password only
       // Note: These banks use the ID as 'username', not separate id/num fields
       const bankUsername = credentials.username || credentials.id || credentials.id_number || '';
-      
+
       scraperCredentials = {
         username: String(bankUsername),
         password: String(credentials.password || '')
       };
-      
+
       // Validate required fields
       if (!scraperCredentials.username) {
         throw new Error('Bank username/ID is required for Beinleumi Group bank scraping');
@@ -145,13 +62,13 @@ async function handler(req, res) {
       // Standard banks (discount, hapoalim, leumi, etc.) use id/password/num
       const bankId = credentials.username || credentials.id || credentials.id_number || '';
       const bankNum = credentials.bankAccountNumber || credentials.bank_account_number || '';
-      
+
       scraperCredentials = {
         id: String(bankId),
         password: String(credentials.password || ''),
         num: String(bankNum)
       };
-      
+
       // Validate required fields for standard banks
       if (!scraperCredentials.id || scraperCredentials.id === 'undefined') {
         throw new Error('Bank ID is required for bank scraping');
@@ -167,50 +84,39 @@ async function handler(req, res) {
         password: String(credentials.password || '')
       };
     }
-    
 
-    // Determine Chrome/Chromium executable path based on environment
-    const getChromePath = () => {
-      // Check for environment variable first (Docker)
-      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-        return process.env.PUPPETEER_EXECUTABLE_PATH;
-      }
-      
-      // Auto-detect based on platform
-      const platform = process.platform;
-      if (platform === 'linux') {
-        return '/usr/bin/chromium'; // Docker/Linux default
-      } else if (platform === 'darwin') {
-        return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'; // macOS
-      } else if (platform === 'win32') {
-        return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'; // Windows
-      }
-      
-      // Let puppeteer auto-detect
-      return undefined;
-    };
+
+    const browser = await puppeteerExtra.launch({
+      headless: false,
+      executablePath: getChromePath(),
+      args: getLaunchArgs(),
+    });
 
     const scraperOptions = {
       ...options,
       companyId,
       startDate: new Date(options.startDate),
-      showBrowser: isBank,
+      browser,
       verbose: true,
-      timeout: 120000, // 120 seconds timeout for each operation (increased)
-      executablePath: getChromePath(),
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--window-size=1920,1080',
-        '--disable-web-security' // Sometimes helps with iframe issues
-      ],
-      // Add a slight delay to help with timing issues
-      defaultTimeout: 30000
+      timeout: 120000,
+      defaultTimeout: 30000,
+      preparePage: async (page) => {
+        // Intercept API calls to Isracard's proxy and add headers that a real browser would send.
+        // The WAF (Akamai) blocks requests missing Referer/X-Requested-With.
+        // This handler runs after the library enables request interception in login().
+        page.on('request', (request) => {
+          if (request.url().includes('/services/ProxyRequestHandler')) {
+            const headers = {
+              ...request.headers(),
+              'Referer': 'https://digital.isracard.co.il/personalarea/Dashboard',
+              'X-Requested-With': 'XMLHttpRequest',
+            };
+            void request.continue({ headers }, 50); // priority 50 > library's default 10
+          }
+        });
+      },
     };
-    
+
     // SECURITY: Removed sensitive logging
     // Validate that all credential values are strings and not undefined
     for (const [key, value] of Object.entries(scraperCredentials)) {
@@ -221,61 +127,34 @@ async function handler(req, res) {
         throw new Error(`Credential ${key} has invalid value`);
       }
     }
-    
+
     const scraper = createScraper(scraperOptions);
 
     // Insert audit row: started
     const triggeredBy = credentials?.username || credentials?.id || credentials?.nickname || 'unknown';
-    const insertAudit = await client.query(
-      `INSERT INTO scrape_events (triggered_by, vendor, start_date, status, message)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [
-        triggeredBy,
-        options.companyId,
-        new Date(options.startDate),
-        'started',
-        'Scrape initiated'
-      ]
-    );
-    const auditId = insertAudit.rows[0]?.id;
+    auditId = await createAuditEntry(client, triggeredBy, options.companyId, options.startDate);
 
     // SECURITY: Removed sensitive logging
     let result;
     try {
       result = await scraper.scrape(scraperCredentials);
     } catch (scrapeError) {
-      if (auditId) {
-        await client.query(
-          `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
-          ['failed', scrapeError.message || 'Scraper exception', auditId]
-        );
-      }
+      await updateAuditEntry(client, auditId, 'failed', scrapeError.message || 'Scraper exception');
       throw new Error(`Scraper exception: ${scrapeError.message}`);
     }
-    
+
     // SECURITY: Removed sensitive result logging
-    
+
     if (!result.success) {
       // Update audit as failed with detailed error information
       const errorMsg = result.errorMessage || result.errorType || 'Scraping failed';
-      const errorDetails = {
-        errorType: result.errorType,
-        errorMessage: result.errorMessage,
-        companyId: options.companyId,
-        ...(result.errorDetails && { errorDetails: result.errorDetails })
-      };
       // SECURITY: Log errors without sensitive details
       console.error('Scraping failed:', result.errorType || 'GENERIC');
-      
-      if (auditId) {
-        await client.query(
-          `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
-          ['failed', errorMsg, auditId]
-        );
-      }
+
+      await updateAuditEntry(client, auditId, 'failed', errorMsg);
       throw new Error(`${result.errorType || 'GENERIC'}: ${errorMsg}`);
     }
-    
+
     let bankTransactions = 0;
     for (const account of result.accounts) {
       for (const txn of account.txns) {
@@ -291,14 +170,9 @@ async function handler(req, res) {
     console.log(`Scraped ${bankTransactions} bank transactions`);
 
     // Update audit as success
-    if (auditId) {
-      const accountsCount = Array.isArray(result.accounts) ? result.accounts.length : 0;
-      const message = `Success: accounts=${accountsCount}, bankTxns=${bankTransactions}`;
-      await client.query(
-        `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
-        ['success', message, auditId]
-      );
-    }
+    const accountsCount = Array.isArray(result.accounts) ? result.accounts.length : 0;
+    const message = `Success: accounts=${accountsCount}, bankTxns=${bankTransactions}`;
+    await updateAuditEntry(client, auditId, 'success', message);
 
     res.status(200).json({
       message: 'Scraping and database update completed successfully',
@@ -308,16 +182,11 @@ async function handler(req, res) {
     console.error('Scraping failed:', error);
     // Attempt to log failure if an audit row exists in scope
     try {
-      if (typeof auditId !== 'undefined' && auditId) {
-        await client.query(
-          `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
-          ['failed', error instanceof Error ? error.message : 'Unknown error', auditId]
-        );
-      }
+      await updateAuditEntry(client, auditId, 'failed', error instanceof Error ? error.message : 'Unknown error');
     } catch (e) {
       // noop - avoid masking original error
     }
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Scraping failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -327,4 +196,4 @@ async function handler(req, res) {
 }
 
 // Export handler with authentication middleware
-export default withAuth(handler); 
+export default withAuth(handler);

@@ -25,10 +25,13 @@
     "next": "^14.2.29",
     "next-auth": "^4.24.11",
     "pg": "^8.16.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
-    "styled-components": "^6.1.18"
+    "styled-components": "^6.1.18",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20.17.49",
