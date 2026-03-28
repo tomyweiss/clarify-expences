@@ -19,6 +19,7 @@ import DatabaseIndicator from './DatabaseIndicator';
 import AccountsModal from './AccountsModal';
 import CategoryManagementModal from './CategoryDashboard/components/CategoryManagementModal';
 import ScrapeAuditModal from './ScrapeAuditModal';
+import SettingsModal from './SettingsModal';
 import { useNotification } from './NotificationContext';
 import { useAuth } from './AuthContext';
 
@@ -29,89 +30,79 @@ interface StringDictionary {
 const pages: StringDictionary = {};
 
 const StyledAppBar = styled(AppBar)({
-  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
-  backdropFilter: 'blur(20px)',
-  borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+  background: '#FFFFFF',
+  borderBottom: '1px solid #E5E7EB',
+  boxShadow: 'none',
 });
 
 const Logo = styled(Typography)({
-  fontFamily: "Assistant, sans-serif",
+  fontFamily: "'Inter', sans-serif",
   fontWeight: 700,
-  letterSpacing: ".3rem",
-  background: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #ec4899 100%)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
+  fontSize: '1.25rem',
+  color: '#111827',
   textDecoration: "none",
   cursor: "pointer",
-  fontSize: '1.5rem',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    filter: 'brightness(1.2)',
-  },
-});
-
-const NavButton = styled(Button)({
-  color: 'rgba(255, 255, 255, 0.9)',
-  textTransform: 'none',
-  fontSize: '0.95rem',
-  fontWeight: 500,
-  padding: '8px 16px',
-  borderRadius: '12px',
-  margin: '0 4px',
-  position: 'relative',
-  overflow: 'hidden',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: '-100%',
-    width: '100%',
-    height: '100%',
-    background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-    transition: 'left 0.5s ease-in-out',
-  },
-  '&:hover': {
-    backgroundColor: 'rgba(96, 165, 250, 0.2)',
-    transform: 'translateY(-2px)',
-    boxShadow: '0 8px 16px rgba(96, 165, 250, 0.3)',
-    color: '#fff',
-  },
-  '&:hover::before': {
-    left: '100%',
-  },
-  '&:active': {
-    transform: 'translateY(0)',
-  },
-});
-
-const SignOutButton = styled(Button)({
-  color: '#fff',
-  textTransform: 'none',
-  fontSize: '0.95rem',
-  fontWeight: 500,
-  padding: '6px 12px',
-  borderRadius: '12px',
-  marginLeft: '8px',
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
   transition: 'all 0.2s ease-in-out',
   '&:hover': {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    color: '#ef4444',
-    transform: 'translateY(-1px)',
-    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.1)',
+    opacity: 0.8,
+  },
+});
+
+const NavButton = styled(Button)({
+  color: '#4B5563',
+  textTransform: 'none',
+  fontSize: '0.875rem',
+  fontWeight: 500,
+  padding: '6px 12px',
+  borderRadius: '8px',
+  margin: '0 4px',
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    backgroundColor: '#F3F4F6',
+    color: '#111827',
   },
   '&:active': {
-    transform: 'translateY(0)',
+    transform: 'scale(0.98)',
   },
+  '&:focus': {
+    outline: 'none',
+  },
+  '&:focus-visible': {
+    outline: 'none',
+  },
+  '& .MuiTouchRipple-root': {
+    display: 'none',
+  }
+});
+
+const SignOutButton = styled(Button)({
+  color: '#6B7280',
+  textTransform: 'none',
+  fontSize: '0.875rem',
+  fontWeight: 500,
+  padding: '6px 12px',
+  borderRadius: '8px',
+  marginLeft: '8px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    backgroundColor: '#FEE2E2',
+    color: '#DC2626',
+  },
+  '&:focus': {
+    outline: 'none',
+  },
+  '&:focus-visible': {
+    outline: 'none',
+  },
+  '& .MuiTouchRipple-root': {
+    display: 'none',
+  }
 });
 
 const redirectTo = (page: string) => {
@@ -123,6 +114,7 @@ function ResponsiveAppBar() {
   const [isScrapeModalOpen, setIsScrapeModalOpen] = React.useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = React.useState(false);
   const [isAccountsModalOpen, setIsAccountsModalOpen] = React.useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
   const [isCategoryManagementOpen, setIsCategoryManagementOpen] = React.useState(false);
   const [isAuditOpen, setIsAuditOpen] = React.useState(false);
   const { showNotification } = useNotification();
@@ -197,7 +189,7 @@ function ResponsiveAppBar() {
                 display: { xs: "none", md: "flex" },
               }}
             >
-              <AccountBalanceWalletIcon sx={{ fontSize: '24px', color: '#60a5fa' }} />
+              <AccountBalanceWalletIcon sx={{ fontSize: '28px', color: '#6366F1' }} />
               Clarify
             </Logo>
 
@@ -231,7 +223,7 @@ function ResponsiveAppBar() {
               </NavButton>
               <NavButton
                 onClick={() => setIsCategoryManagementOpen(true)}
-                startIcon={<SettingsIcon />}
+                startIcon={<EditIcon />}
               >
                 Categories
               </NavButton>
@@ -291,6 +283,7 @@ function ResponsiveAppBar() {
         }}
       />
       <ScrapeAuditModal open={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
+      <SettingsModal open={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
     </>
   );
 }

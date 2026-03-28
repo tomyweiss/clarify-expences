@@ -286,49 +286,74 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       fullWidth
       PaperProps={{
         style: {
-          backgroundColor: '#ffffff',
-          borderRadius: '24px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          border: '1px solid #E5E7EB'
+        }
+      }}
+      BackdropProps={{
+        style: {
+          backgroundColor: 'rgba(17, 24, 39, 0.5)',
+          backdropFilter: 'blur(4px)'
         }
       }}
     >
       <ModalHeader title="Scrape" onClose={onClose} />
-      <DialogContent style={{ padding: '0 24px 24px' }}>
+      <DialogContent style={{ padding: '0 32px 32px', color: '#111827' }}>
         {error && (
           <div style={{
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
+            background: '#FEE2E2',
+            color: '#DC2626',
+            border: '1px solid #FECACA',
             padding: '16px',
             borderRadius: '8px',
-            marginBottom: '16px'
+            marginTop: '16px',
+            marginBottom: '16px',
           }}>
             {error}
           </div>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 3, maxHeight: '450px', overflow: 'auto', paddingRight: '12px' }}>
           {initialConfig ? renderExistingAccountForm() : renderNewScrapeForm()}
         </Box>
       </DialogContent>
-      <DialogActions style={{ padding: '16px 24px' }}>
-        <Button onClick={onClose} style={{ color: '#666' }}>
+      <DialogActions style={{ padding: '0 32px 32px', gap: '16px' }}>
+        <Button 
+          onClick={onClose} 
+          sx={{ 
+            color: '#64748b',
+            textTransform: 'none',
+            fontWeight: 600
+          }}
+        >
           Cancel
         </Button>
         <Button
           onClick={handleScrape}
           variant="contained"
           disabled={isLoading}
-          style={{
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            padding: '8px 24px',
+          sx={{
+            backgroundColor: '#6366F1',
             borderRadius: '8px',
+            padding: '10px 32px',
             textTransform: 'none',
-            fontWeight: 500
+            fontWeight: 500,
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#4F46E5',
+              boxShadow: 'none',
+            },
+            '&:focus': {
+              outline: 'none',
+            },
+            '&:focus-visible': {
+              outline: 'none',
+            }
           }}
         >
-          {isLoading ? 'SCRAPING...' : 'SCRAPE'}
+          {isLoading ? 'Scraping...' : 'SCRAPE'}
         </Button>
       </DialogActions>
     </Dialog>

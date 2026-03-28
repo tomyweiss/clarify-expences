@@ -50,11 +50,10 @@ interface AccountsModalProps {
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   transition: 'all 0.2s ease-in-out',
   '&:nth-of-type(odd)': {
-    backgroundColor: 'rgba(248, 250, 252, 0.5)',
+    backgroundColor: '#F9FAFB',
   },
   '&:hover': {
-    background: 'linear-gradient(135deg, rgba(96, 165, 250, 0.05) 0%, rgba(167, 139, 250, 0.05) 100%)',
-    transform: 'scale(1.005)',
+    backgroundColor: '#F3F4F6',
   },
 }));
 
@@ -62,16 +61,14 @@ const SectionHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  padding: '20px 0',
-  marginBottom: '20px',
-  borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
-  background: 'linear-gradient(90deg, rgba(96, 165, 250, 0.05) 0%, transparent 100%)',
-  borderRadius: '8px',
+  padding: '16px 0',
+  marginBottom: '16px',
+  borderBottom: '1px solid #E5E7EB',
   paddingLeft: '12px',
   '& .MuiTypography-root': {
-    fontWeight: 700,
-    fontSize: '18px',
-    letterSpacing: '-0.01em',
+    fontWeight: 600,
+    fontSize: '16px',
+    color: '#111827',
   },
 }));
 
@@ -261,87 +258,85 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
 
     return (
       <Box sx={{
-        borderRadius: '20px',
+        borderRadius: '12px',
         overflow: 'hidden',
-        border: '1px solid rgba(148, 163, 184, 0.15)',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
-        backdropFilter: 'blur(10px)'
+        border: '1px solid #E5E7EB',
+        background: '#FFFFFF',
       }}>
       <Table>
         <TableHead>
           <TableRow>
             <TableCell style={{
-              color: '#475569',
-              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              color: '#6B7280',
+              borderBottom: '1px solid #E5E7EB',
               fontWeight: 600,
               fontSize: '13px',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              background: '#F9FAFB',
               padding: '16px'
             }}>Nickname</TableCell>
             <TableCell style={{
-              color: '#475569',
-              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              color: '#6B7280',
+              borderBottom: '1px solid #E5E7EB',
               fontWeight: 600,
               fontSize: '13px',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              background: '#F9FAFB',
               padding: '16px'
             }}>Vendor</TableCell>
             <TableCell style={{
-              color: '#475569',
-              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              color: '#6B7280',
+              borderBottom: '1px solid #E5E7EB',
               fontWeight: 600,
               fontSize: '13px',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              background: '#F9FAFB',
               padding: '16px'
             }}>{type === 'bank' ? 'Username' : 'ID Number'}</TableCell>
             {type === 'bank' ? (
               <TableCell style={{
-                color: '#475569',
-                borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+                color: '#6B7280',
+                borderBottom: '1px solid #E5E7EB',
                 fontWeight: 600,
                 fontSize: '13px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                background: '#F9FAFB',
                 padding: '16px'
               }}>Account Number</TableCell>
             ) : (
               <TableCell style={{
-                color: '#475569',
-                borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+                color: '#6B7280',
+                borderBottom: '1px solid #E5E7EB',
                 fontWeight: 600,
                 fontSize: '13px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                background: '#F9FAFB',
                 padding: '16px'
               }}>Card Last Digits</TableCell>
             )}
             <TableCell style={{
-              color: '#475569',
-              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              color: '#6B7280',
+              borderBottom: '1px solid #E5E7EB',
               fontWeight: 600,
               fontSize: '13px',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              background: '#F9FAFB',
               padding: '16px'
             }}>Created At</TableCell>
             <TableCell align="right" style={{
-              color: '#475569',
-              borderBottom: '2px solid rgba(148, 163, 184, 0.2)',
+              color: '#6B7280',
+              borderBottom: '1px solid #E5E7EB',
               fontWeight: 600,
               fontSize: '13px',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              background: '#F9FAFB',
               padding: '16px'
             }}>Actions</TableCell>
           </TableRow>
@@ -401,17 +396,16 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
         fullWidth
         PaperProps={{
           style: {
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '28px',
-            boxShadow: '0 24px 64px rgba(0, 0, 0, 0.15)',
-            border: '1px solid rgba(148, 163, 184, 0.2)'
+            background: '#FFFFFF',
+            borderRadius: '12px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            border: '1px solid #E5E7EB'
           }
         }}
         BackdropProps={{
           style: {
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(8px)'
+            backgroundColor: 'rgba(17, 24, 39, 0.5)',
+            backdropFilter: 'blur(4px)'
           }
         }}
       >
@@ -425,32 +419,37 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             }
           }}
           actions={
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setIsAdding(true)}
-              sx={{
-                backgroundColor: '#3b82f6',
-                '&:hover': {
-                  backgroundColor: '#2563eb',
-                },
-              }}
-            >
-              Add Account
-            </Button>
+            !isAdding && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setIsAdding(true)}
+                sx={{
+                  backgroundColor: '#6366F1',
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  boxShadow: 'none',
+                  '&:hover': {
+                    backgroundColor: '#4F46E5',
+                    boxShadow: 'none',
+                  },
+                }}
+              >
+                Add Account
+              </Button>
+            )
           }
         />
-        <DialogContent style={{ padding: '0 32px 32px', color: '#1e293b' }}>
+        <DialogContent style={{ padding: '0 32px 32px', color: '#1e293b', minHeight: '550px' }}>
           {error && (
             <div style={{
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#1e293b',
+              background: '#FEE2E2',
+              color: '#DC2626',
+              border: '1px solid #FECACA',
               padding: '16px',
-              borderRadius: '16px',
+              borderRadius: '8px',
               marginBottom: '16px',
-              boxShadow: '0 8px 24px rgba(239, 68, 68, 0.3)',
-              backdropFilter: 'blur(10px)'
             }}>
               {error}
             </div>
@@ -464,7 +463,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
               No saved accounts found
             </Box>
           ) : isAdding ? (
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, background: 'rgba(255, 255, 255, 0.5)', borderRadius: '20px', border: '1px solid rgba(148, 163, 184, 0.1)' }}>
               <TextField
                 fullWidth
                 label="Account Nickname"
@@ -565,17 +564,39 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
                 margin="normal"
                 required
               />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                <Button onClick={() => setIsAdding(false)} sx={{ mr: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, gap: 2 }}>
+                <Button 
+                  onClick={() => setIsAdding(false)}
+                  sx={{ 
+                    color: '#64748b',
+                    textTransform: 'none',
+                    fontWeight: 600
+                  }}
+                >
                   Cancel
                 </Button>
-                <Button variant="contained" onClick={handleAdd}>
-                  Add
+                <Button 
+                  variant="contained" 
+                  onClick={handleAdd}
+                  sx={{
+                    backgroundColor: '#6366F1',
+                    borderRadius: '8px',
+                    padding: '8px 24px',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    boxShadow: 'none',
+                    '&:hover': {
+                      backgroundColor: '#4F46E5',
+                      boxShadow: 'none',
+                    },
+                  }}
+                >
+                  Add Account
                 </Button>
               </Box>
             </Box>
           ) : (
-            <Box>
+            <Box style={{ maxHeight: '450px', overflow: 'auto', paddingRight: '12px' }}>
               {/* Bank Accounts Section */}
               <AccountSection>
                 <SectionHeader>

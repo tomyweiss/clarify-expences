@@ -1,1 +1,1 @@
-export { formatNumber, formatCurrencyILS } from './format';
+export { formatNumber, formatCurrencyILS, getCurrencySymbol, getCurrency, setCurrency } from './format';

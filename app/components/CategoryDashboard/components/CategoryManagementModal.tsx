@@ -335,15 +335,15 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
       fullWidth
       PaperProps={{
         style: {
-          backgroundColor: '#ffffff',
-          borderRadius: '24px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+          backgroundColor: '#FFFFFF',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
         }
       }}
     >
       <ModalHeader title="Category Management" onClose={handleClose} />
 
-      <DialogContent style={{ padding: '0 24px 24px 24px' }}>
+      <DialogContent style={{ padding: '0 32px 32px', minHeight: '550px' }}>
         {error && (
           <Alert severity="error" style={{ marginBottom: '16px' }}>
             {error}
@@ -392,12 +392,13 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                 onClick={handleMerge}
                 disabled={selectedCategories.length < 2 || !newCategoryName.trim() || isLoading}
                 style={{
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  borderRadius: '12px',
+                  backgroundColor: '#6366F1',
+                  color: '#FFFFFF',
+                  borderRadius: '8px',
                   padding: '10px 24px',
                   textTransform: 'none',
-                  fontWeight: 600
+                  fontWeight: 500,
+                  boxShadow: 'none',
                 }}
               >
                 {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Merge Selected Categories'}
@@ -418,10 +419,11 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
               ) : (
                 <Box 
                   style={{ 
-                    maxHeight: '400px', 
+                    maxHeight: '450px', 
                     overflow: 'auto',
                     display: 'flex',
                     flexWrap: 'wrap',
+                    padding: '4px 12px 4px 4px',
                     gap: '8px'
                   }}
                 >
@@ -434,30 +436,34 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                       deleteIcon={<Checkbox
                         checked={selectedCategories.includes(category.name)}
                         style={{ color: 'white' }}
+                        size="small"
                       />}
-                      style={{
+                      sx={{
                         backgroundColor: selectedCategories.includes(category.name) 
                           ? categoryColors[category.name] || '#3b82f6'
                           : '#f8f9fa',
                         color: selectedCategories.includes(category.name) 
                           ? 'white'
                           : '#333',
-                        border: selectedCategories.includes(category.name) 
-                          ? 'none'
-                          : `1px solid ${categoryColors[category.name] || '#3b82f6'}`,
+                        border: `1px solid ${selectedCategories.includes(category.name) 
+                          ? 'transparent' 
+                          : categoryColors[category.name] || '#3b82f6'}`,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease-in-out',
-                        fontWeight: selectedCategories.includes(category.name) ? '600' : '500',
+                        fontWeight: selectedCategories.includes(category.name) ? '500' : '400',
                         fontSize: '14px',
-                        height: '32px'
-                      }}
-                      sx={{
+                        height: '32px',
+                        borderRadius: '9999px',
                         '&:hover': {
                           backgroundColor: selectedCategories.includes(category.name) 
-                            ? categoryColors[category.name] || '#3b82f6'
-                            : 'rgba(59, 130, 246, 0.1)',
-                          transform: 'translateY(-1px)',
-                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                            ? categoryColors[category.name] || '#6366F1'
+                            : '#F3F4F6',
+                          borderColor: selectedCategories.includes(category.name) 
+                            ? 'transparent' 
+                            : categoryColors[category.name] || '#6366F1'
+                        },
+                        '& .MuiChip-label': {
+                          padding: '0 12px'
                         }
                       }}
                     />
@@ -480,7 +486,7 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
               </Typography>
               
               <Grid container spacing={2} style={{ marginBottom: '16px' }}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     fullWidth
                     label="Transaction Name Pattern"
@@ -490,7 +496,7 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                     disabled={isLoading}
                   />
                 </Grid>
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <TextField
                     fullWidth
                     label="Target Category"
@@ -500,19 +506,20 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                     disabled={isLoading}
                   />
                 </Grid>
-                <Grid item xs={2}>
+                <Grid size={2}>
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={handleCreateRule}
                     disabled={!newRule.name_pattern.trim() || !newRule.target_category.trim() || isLoading}
                     style={{
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      borderRadius: '12px',
+                      backgroundColor: '#10B981',
+                      color: '#FFFFFF',
+                      borderRadius: '8px',
                       padding: '10px 16px',
                       textTransform: 'none',
-                      fontWeight: 600,
+                      fontWeight: 500,
+                      boxShadow: 'none',
                       height: '56px',
                       width: '100%'
                     }}
@@ -528,12 +535,12 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                 onClick={handleApplyRules}
                 disabled={isApplyingRules || rules.length === 0}
                 style={{
-                  borderColor: '#3b82f6',
-                  color: '#3b82f6',
-                  borderRadius: '12px',
+                  borderColor: '#6366F1',
+                  color: '#6366F1',
+                  borderRadius: '8px',
                   padding: '10px 24px',
                   textTransform: 'none',
-                  fontWeight: 600
+                  fontWeight: 500
                 }}
               >
                 {isApplyingRules ? <CircularProgress size={20} color="inherit" /> : 'Apply Rules to Existing Transactions'}
@@ -556,52 +563,54 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                   <Typography>No rules created yet. Create your first rule above.</Typography>
                 </Box>
               ) : (
-                <Grid container spacing={2}>
-                  {rules.map((rule) => (
-                    <Grid item xs={12} key={rule.id}>
-                      <Card style={{ borderRadius: '12px' }}>
-                        <CardContent style={{ padding: '16px' }}>
-                          <Box display="flex" alignItems="center" justifyContent="space-between">
-                            <Box flex={1}>
-                              <Typography variant="body1" style={{ fontWeight: 600, marginBottom: '4px' }}>
-                                IF transaction name contains "{rule.name_pattern}"
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                THEN set category to "{rule.target_category}"
-                              </Typography>
+                <Box style={{ maxHeight: '450px', overflow: 'auto', padding: '4px 12px 4px 4px' }}>
+                  <Grid container spacing={2}>
+                    {rules.map((rule) => (
+                      <Grid size={12} key={rule.id}>
+                        <Card style={{ borderRadius: '12px' }}>
+                          <CardContent style={{ padding: '16px' }}>
+                            <Box display="flex" alignItems="center" justifyContent="space-between">
+                              <Box flex={1}>
+                                <Typography variant="body1" style={{ fontWeight: 600, marginBottom: '4px' }}>
+                                  IF transaction name contains "{rule.name_pattern}"
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary">
+                                  THEN set category to "{rule.target_category}"
+                                </Typography>
+                              </Box>
+                              <Box display="flex" alignItems="center" gap="8px">
+                                <FormControlLabel
+                                  control={
+                                    <Switch
+                                      checked={rule.is_active}
+                                      onChange={(e) => handleUpdateRule({ ...rule, is_active: e.target.checked })}
+                                      disabled={isLoading}
+                                    />
+                                  }
+                                  label=""
+                                />
+                                <IconButton
+                                  onClick={() => setEditingRule(rule)}
+                                  size="small"
+                                  style={{ color: '#3b82f6' }}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                                <IconButton
+                                  onClick={() => handleDeleteRule(rule.id)}
+                                  size="small"
+                                  style={{ color: '#ef4444' }}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Box>
                             </Box>
-                            <Box display="flex" alignItems="center" gap="8px">
-                              <FormControlLabel
-                                control={
-                                  <Switch
-                                    checked={rule.is_active}
-                                    onChange={(e) => handleUpdateRule({ ...rule, is_active: e.target.checked })}
-                                    disabled={isLoading}
-                                  />
-                                }
-                                label=""
-                              />
-                              <IconButton
-                                onClick={() => setEditingRule(rule)}
-                                size="small"
-                                style={{ color: '#3b82f6' }}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                              <IconButton
-                                onClick={() => handleDeleteRule(rule.id)}
-                                size="small"
-                                style={{ color: '#ef4444' }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Box>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
               )}
             </Box>
 
@@ -621,7 +630,7 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                 <Card style={{ padding: '24px', maxWidth: '500px', width: '100%', margin: '16px' }}>
                   <Typography variant="h6" style={{ marginBottom: '16px' }}>Edit Rule</Typography>
                   <Grid container spacing={2} style={{ marginBottom: '16px' }}>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <TextField
                         fullWidth
                         label="Transaction Name Pattern"
@@ -630,7 +639,7 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                         disabled={isLoading}
                       />
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <TextField
                         fullWidth
                         label="Target Category"
@@ -652,8 +661,12 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                       onClick={() => handleUpdateRule(editingRule)}
                       disabled={isLoading}
                       style={{
-                        backgroundColor: '#3b82f6',
-                        color: 'white'
+                        backgroundColor: '#6366F1',
+                        color: '#FFFFFF',
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        boxShadow: 'none',
+                        fontWeight: 500
                       }}
                     >
                       {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Update'}

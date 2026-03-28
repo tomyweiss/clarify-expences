@@ -12,38 +12,34 @@ import TransactionsTable from './components/TransactionsTable';
 
 // Common styles
 const BUTTON_STYLE = {
-  background: 'rgba(255, 255, 255, 0.8)',
-  backdropFilter: 'blur(10px)',
-  padding: '14px',
-  borderRadius: '16px',
-  border: '1px solid rgba(148, 163, 184, 0.2)',
-  color: '#475569',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
+  background: '#FFFFFF',
+  padding: '10px 14px',
+  borderRadius: '8px',
+  border: '1px solid #E5E7EB',
+  color: '#4B5563',
+  transition: 'all 0.2s ease-in-out',
+  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
 };
 
 const HOVER_BUTTON_STYLE = {
-  transform: 'translateY(-2px) scale(1.05)',
-  boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
-  background: 'rgba(96, 165, 250, 0.15)',
-  color: '#3b82f6'
+  background: '#F3F4F6',
+  color: '#111827'
 };
 
 const SELECT_STYLE = {
-  padding: '14px 28px',
-  borderRadius: '16px',
-  border: '1px solid rgba(148, 163, 184, 0.2)',
-  background: 'rgba(255, 255, 255, 0.8)',
-  backdropFilter: 'blur(10px)',
-  color: '#1e293b',
-  fontSize: '15px',
-  fontWeight: '600',
+  padding: '10px 24px',
+  borderRadius: '8px',
+  border: '1px solid #E5E7EB',
+  background: '#FFFFFF',
+  color: '#111827',
+  fontSize: '14px',
+  fontWeight: '500',
   cursor: 'pointer',
   outline: 'none',
   textAlign: 'right' as const,
   direction: 'rtl' as const,
-  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+  transition: 'all 0.2s ease-in-out'
 };
 
 // Helper function to fetch all transactions for a month
@@ -421,51 +417,14 @@ const CategoryDashboard: React.FC = () => {
     <div style={{ 
       minHeight: '100vh',
       position: 'relative',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+      background: '#F9FAFB',
       overflow: 'hidden'
     }}>
-      {/* Animated background elements */}
-      <div style={{
-        position: 'absolute',
-        top: '-10%',
-        right: '-5%',
-        width: '600px',
-        height: '600px',
-        background: 'radial-gradient(circle, rgba(96, 165, 250, 0.08) 0%, transparent 70%)',
-        borderRadius: '50%',
-        filter: 'blur(60px)',
-        animation: 'float 20s ease-in-out infinite',
-        zIndex: 0
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: '-10%',
-        left: '-5%',
-        width: '500px',
-        height: '500px',
-        background: 'radial-gradient(circle, rgba(167, 139, 250, 0.06) 0%, transparent 70%)',
-        borderRadius: '50%',
-        filter: 'blur(60px)',
-        animation: 'float 25s ease-in-out infinite reverse',
-        zIndex: 0
-      }} />
-      <div style={{
-        position: 'absolute',
-        top: '40%',
-        right: '20%',
-        width: '400px',
-        height: '400px',
-        background: 'radial-gradient(circle, rgba(236, 72, 153, 0.05) 0%, transparent 70%)',
-        borderRadius: '50%',
-        filter: 'blur(60px)',
-        animation: 'float 30s ease-in-out infinite',
-        zIndex: 0
-      }} />
       
       {/* Main content container */}
       <div style={{ 
         padding: '24px 16px',
-        maxWidth: '1440px',
+        maxWidth: '1152px',
         margin: '0 auto',
         position: 'relative',
         zIndex: 1
@@ -473,16 +432,8 @@ const CategoryDashboard: React.FC = () => {
 
       {/* Hero Section */}
       <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        borderRadius: '32px',
-        padding: '36px',
-        marginBottom: '90px',
-        marginTop: '40px',
-        marginLeft: '24px',
-        marginRight: '24px',
-        border: '1px solid rgba(148, 163, 184, 0.15)',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        marginBottom: '32px',
+        marginTop: '80px',
         position: 'relative',
         overflow: 'hidden'
       }}>
@@ -507,13 +458,10 @@ const CategoryDashboard: React.FC = () => {
         }}>
           <div>
             <h1 style={{
-              fontSize: '28px',
+              fontSize: '24px',
               fontWeight: 700,
               margin: 0,
-              background: 'linear-gradient(135deg, #64748b 0%, #94a3b8 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
+              color: '#111827'
             }}>Financial Overview</h1>
           </div>
           <div style={{
@@ -534,24 +482,17 @@ const CategoryDashboard: React.FC = () => {
               style={{
                 ...BUTTON_STYLE,
                 ...(showTransactionsTable ? {
-                  background: 'rgba(96, 165, 250, 0.2)',
-                  border: '1px solid rgba(96, 165, 250, 0.4)',
-                  color: '#3b82f6',
-                  boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)'
+                  background: '#6366F1',
+                  borderColor: '#6366F1',
+                  color: '#FFFFFF'
                 } : {})
               }}
-              onMouseEnter={(e) => Object.assign(e.currentTarget.style, {
-                transform: 'translateY(-2px) scale(1.05)',
-                boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
-                color: '#3b82f6'
-              })}
-              onMouseLeave={(e) => Object.assign(e.currentTarget.style, {
-                transform: 'translateY(0) scale(1)',
-                color: showTransactionsTable ? '#3b82f6' : '#475569',
-                boxShadow: showTransactionsTable 
-                  ? '0 8px 24px rgba(96, 165, 250, 0.3)' 
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)'
-              })}
+              onMouseEnter={(e) => {
+                if (!showTransactionsTable) Object.assign(e.currentTarget.style, HOVER_BUTTON_STYLE)
+              }}
+              onMouseLeave={(e) => {
+                if (!showTransactionsTable) Object.assign(e.currentTarget.style, BUTTON_STYLE)
+              }}
             >
               <TableChartIcon />
             </IconButton>
@@ -559,16 +500,8 @@ const CategoryDashboard: React.FC = () => {
               value={selectedYear}
               onChange={handleYearChange}
               style={{ ...SELECT_STYLE, minWidth: '120px' }}
-              onMouseEnter={(e) => Object.assign(e.currentTarget.style, {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
-                background: 'rgba(96, 165, 250, 0.15)'
-              })}
-              onMouseLeave={(e) => Object.assign(e.currentTarget.style, {
-                transform: 'translateY(0)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-                background: 'rgba(255, 255, 255, 0.8)'
-              })}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, { background: '#F3F4F6' })}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, { background: '#FFFFFF' })}
             >
               {uniqueYears.map((year) => (
                 <option key={year} value={year} style={{ background: '#ffffff', color: '#1e293b' }}>
@@ -580,16 +513,8 @@ const CategoryDashboard: React.FC = () => {
               value={selectedMonth}
               onChange={handleMonthChange}
               style={{ ...SELECT_STYLE, minWidth: '160px' }}
-              onMouseEnter={(e) => Object.assign(e.currentTarget.style, {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 24px rgba(96, 165, 250, 0.3)',
-                background: 'rgba(96, 165, 250, 0.15)'
-              })}
-              onMouseLeave={(e) => Object.assign(e.currentTarget.style, {
-                transform: 'translateY(0)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-                background: 'rgba(255, 255, 255, 0.8)'
-              })}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, { background: '#F3F4F6' })}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, { background: '#FFFFFF' })}
             >
               {uniqueMonths.map((month) => (
                 <option key={month} value={month} style={{ background: '#ffffff', color: '#1e293b' }}>
@@ -599,7 +524,7 @@ const CategoryDashboard: React.FC = () => {
             </select>
           </div>
         </div>
-
+      </div>
 
       {/* Summary Cards Section */}
       <div style={{ 
@@ -632,12 +557,11 @@ const CategoryDashboard: React.FC = () => {
 
       {showTransactionsTable ? (
         <div style={{
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '32px',
-          padding: '32px',
-          border: '1px solid rgba(148, 163, 184, 0.15)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)'
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          padding: '24px',
+          border: '1px solid #E5E7EB',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
         }}>
           <TransactionsTable 
             transactions={transactions} 
@@ -656,24 +580,22 @@ const CategoryDashboard: React.FC = () => {
             gap: '16px'
           }}>
             <div style={{
-              height: '2px',
+              height: '1px',
               flex: 1,
-              background: 'linear-gradient(90deg, transparent 0%, rgba(96, 165, 250, 0.3) 50%, transparent 100%)',
-              borderRadius: '2px'
+              background: '#E5E7EB',
             }} />
             <h2 style={{
               fontSize: '14px',
-              fontWeight: 700,
+              fontWeight: 600,
               margin: 0,
-              color: '#475569',
-              letterSpacing: '2px',
+              color: '#6B7280',
+              letterSpacing: '0.5px',
               textTransform: 'uppercase'
             }}>Expense Categories</h2>
             <div style={{
-              height: '2px',
+              height: '1px',
               flex: 1,
-              background: 'linear-gradient(90deg, transparent 0%, rgba(96, 165, 250, 0.3) 50%, transparent 100%)',
-              borderRadius: '2px'
+              background: '#E5E7EB',
             }} />
           </div>
           <div style={{ 
@@ -701,11 +623,10 @@ const CategoryDashboard: React.FC = () => {
               gridColumn: '1 / -1',
               textAlign: 'center',
               padding: '64px',
-              background: 'rgba(255, 255, 255, 0.95)',
-              borderRadius: '24px',
-              border: '1px solid rgba(148, 163, 184, 0.15)',
-              backdropFilter: 'blur(20px)',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)'
+              background: '#FFFFFF',
+              borderRadius: '12px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
             }}>
               <div style={{
                 fontSize: '48px',
@@ -722,7 +643,6 @@ const CategoryDashboard: React.FC = () => {
         </div>
         </>
       )}
-      </div>
     </div>
 
       {modalData && (

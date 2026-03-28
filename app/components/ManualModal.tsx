@@ -182,23 +182,22 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
       fullWidth
       PaperProps={{
         style: {
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '28px',
-          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.15)',
-          border: '1px solid rgba(148, 163, 184, 0.2)'
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          border: '1px solid #E5E7EB'
         }
       }}
       BackdropProps={{
         style: {
-          backgroundColor: 'rgba(0, 0, 0, 0.4)',
-          backdropFilter: 'blur(8px)'
+          backgroundColor: 'rgba(17, 24, 39, 0.5)',
+          backdropFilter: 'blur(4px)'
         }
       }}
     >
       <ModalHeader title="Manual Transaction Entry" onClose={handleClose} />
 
-      <DialogContent style={{ padding: '0 24px 24px' }}>
+      <DialogContent style={{ padding: '0 32px 32px' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
           <Tabs 
             value={tabValue} 
@@ -240,24 +239,12 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
               alignItems: 'center',
               gap: 1.5,
               p: 2.5,
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, rgba(96, 165, 250, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%)',
-              border: '1px solid rgba(96, 165, 250, 0.3)',
+              borderRadius: '12px',
+              background: '#EFF6FF',
+              border: '1px solid #BFDBFE',
               color: '#1e293b',
-              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)',
               position: 'relative',
-              overflow: 'hidden',
-              backdropFilter: 'blur(10px)',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                width: '100px',
-                height: '100px',
-                background: 'radial-gradient(circle at top right, rgba(96, 165, 250, 0.3), transparent 70%)',
-                filter: 'blur(20px)'
-              }
+              overflow: 'hidden'
             }}>
               <LightbulbOutlinedIcon sx={{ color: '#0284c7' }} />
               <div>
@@ -368,24 +355,12 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
               alignItems: 'center',
               gap: 1.5,
               p: 2.5,
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '12px',
+              background: '#FEF2F2',
+              border: '1px solid #FECACA',
               color: '#1e293b',
-              boxShadow: '0 8px 24px rgba(239, 68, 68, 0.3)',
               position: 'relative',
-              overflow: 'hidden',
-              backdropFilter: 'blur(10px)',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                width: '100px',
-                height: '100px',
-                background: 'radial-gradient(circle at top right, rgba(239, 68, 68, 0.3), transparent 70%)',
-                filter: 'blur(20px)'
-              }
+              overflow: 'hidden'
             }}>
               <LightbulbOutlinedIcon sx={{ color: '#dc2626' }} />
               <div>
@@ -469,22 +444,20 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
                 MenuProps={{
                   PaperProps: {
                     style: {
-                      background: 'rgba(255, 255, 255, 0.98)',
-                      backdropFilter: 'blur(20px)',
-                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      background: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
                     }
                   }
                 }}
                 disabled={loadingCategories}
                 sx={{
-                  background: 'rgba(255, 255, 255, 0.8)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '12px',
+                  background: '#FFFFFF',
+                  borderRadius: '8px',
                   '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    borderColor: '#E5E7EB',
                   },
                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(96, 165, 250, 0.5)',
+                    borderColor: '#9CA3AF',
                   },
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                     borderColor: '#ef4444',
@@ -546,22 +519,25 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
         <Button 
           onClick={handleClose}
           sx={{
-            color: '#475569',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-            borderRadius: '14px',
+            color: '#4B5563',
+            background: '#FFFFFF',
+            borderRadius: '8px',
             padding: '10px 24px',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            fontWeight: 600,
+            border: '1px solid #E5E7EB',
+            fontWeight: 500,
             textTransform: 'none',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'all 0.2s ease-in-out',
+            boxShadow: 'none',
             '&:hover': {
-              background: 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)',
-              transform: 'translateY(-2px)',
-              boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
+              background: '#F3F4F6',
+              boxShadow: 'none',
             },
-            '&:active': {
-              transform: 'translateY(0)',
+            '&:focus': {
+              outline: 'none',
             },
+            '&:focus-visible': {
+              outline: 'none',
+            }
           }}
         >
           Cancel
@@ -571,33 +547,28 @@ const ManualModal: React.FC<ManualModalProps> = ({ open, onClose, onSave }) => {
           onClick={handleSubmit}
           disabled={loadingCategories && tabValue === 1}
           sx={{
-            background: tabValue === 0 
-              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
-              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            borderRadius: '14px',
+            background: tabValue === 0 ? '#10B981' : '#EF4444',
+            borderRadius: '8px',
             padding: '10px 24px',
-            fontWeight: 600,
+            fontWeight: 500,
             textTransform: 'none',
-            boxShadow: tabValue === 0 
-              ? '0 8px 24px rgba(16, 185, 129, 0.4)' 
-              : '0 8px 24px rgba(239, 68, 68, 0.4)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: 'none',
+            transition: 'all 0.2s ease-in-out',
+            color: '#FFFFFF',
             '&:hover': {
-              background: tabValue === 0 
-                ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' 
-                : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-              transform: 'translateY(-2px)',
-              boxShadow: tabValue === 0 
-                ? '0 12px 32px rgba(16, 185, 129, 0.5)' 
-                : '0 12px 32px rgba(239, 68, 68, 0.5)',
-            },
-            '&:active': {
-              transform: 'translateY(0)',
-            },
-            '&:disabled': {
-              background: 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)',
+              background: tabValue === 0 ? '#059669' : '#DC2626',
               boxShadow: 'none',
             },
+            '&:disabled': {
+              background: '#D1D5DB',
+              boxShadow: 'none',
+            },
+            '&:focus': {
+              outline: 'none',
+            },
+            '&:focus-visible': {
+              outline: 'none',
+            }
           }}
         >
           Save {tabValue === 0 ? 'Income' : 'Expense'}

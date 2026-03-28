@@ -4,7 +4,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
-import { formatNumber } from '../utils/formatUtils';
+import { formatNumber, getCurrencySymbol } from '../utils/formatUtils';
 import { dateUtils } from '../utils/dateUtils';
 import { useCategories } from '../utils/useCategories';
 import { TABLE_HEADER_CELL_STYLE, TABLE_BODY_CELL_STYLE, TABLE_ROW_HOVER_STYLE, TABLE_ROW_HOVER_BACKGROUND } from '../utils/tableStyles';
@@ -86,22 +86,21 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
     <Paper sx={{ 
       width: '100%', 
       overflow: 'hidden', 
-      borderRadius: '24px',
-      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
-      backdropFilter: 'blur(20px)',
-      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
-      border: '1px solid rgba(148, 163, 184, 0.2)'
+      borderRadius: '12px',
+      background: '#FFFFFF',
+      boxShadow: 'none',
     }}>
       <Table
         onClick={handleTableClick}
+        sx={{ tableLayout: 'fixed' }}
       >
         <TableHead>
           <TableRow>
-            <TableCell style={TABLE_HEADER_CELL_STYLE}>Description</TableCell>
-            <TableCell style={TABLE_HEADER_CELL_STYLE}>Category</TableCell>
-            <TableCell align="right" style={TABLE_HEADER_CELL_STYLE}>Amount</TableCell>
-            <TableCell style={TABLE_HEADER_CELL_STYLE}>Date</TableCell>
-            <TableCell align="right" style={TABLE_HEADER_CELL_STYLE}>Actions</TableCell>
+            <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '30%' }}>Description</TableCell>
+            <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '25%' }}>Category</TableCell>
+            <TableCell align="right" style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Amount</TableCell>
+            <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Date</TableCell>
+            <TableCell align="center" style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -160,15 +159,15 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                   <span
                     style={{
                       cursor: 'pointer',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
+                      padding: '4px 12px',
+                      borderRadius: '9999px',
                       transition: 'all 0.2s ease-in-out',
                       display: 'inline-block',
                       minWidth: '60px',
                       textAlign: 'center',
                       backgroundColor: 'rgba(59, 130, 246, 0.1)',
                       color: '#3b82f6',
-                      fontWeight: '400',
+                      fontWeight: '500',
                       fontSize: '13px'
                     }}
                     onClick={(e) => {
@@ -178,11 +177,9 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-                      e.currentTarget.style.transform = 'scale(1.02)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-                      e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
                     {transaction.category}
@@ -219,7 +216,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                     }}
                   />
                 ) : (
-                  `₪${formatNumber(Math.abs(transaction.price))}`
+                  `${getCurrencySymbol()}${formatNumber(Math.abs(transaction.price))}`
                 )}
               </TableCell>
               <TableCell style={{ ...TABLE_BODY_CELL_STYLE, color: '#64748b' }}>
