@@ -14,7 +14,7 @@ import Autocomplete from '@mui/material/Autocomplete';
 import CheckIcon from '@mui/icons-material/Check';
 import EditIcon from '@mui/icons-material/Edit';
 import { ExpensesModalProps, Expense } from '../types';
-import { formatNumber } from '../utils/format';
+import { formatNumber, getCurrencySymbol } from '../utils/format';
 import { dateUtils } from '../utils/dateUtils';
 import dynamic from 'next/dynamic';
 const LineChart = dynamic(() => import('@mui/x-charts').then(m => m.LineChart), { ssr: false });
@@ -218,22 +218,21 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
       fullWidth
       PaperProps={{
         style: {
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '28px',
-          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.15)',
-          border: '1px solid rgba(148, 163, 184, 0.2)'
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          border: '1px solid #E5E7EB'
         }
       }}
       BackdropProps={{
         style: {
-          backgroundColor: 'rgba(0, 0, 0, 0.4)',
-          backdropFilter: 'blur(8px)'
+          backgroundColor: 'rgba(17, 24, 39, 0.5)',
+          backdropFilter: 'blur(4px)'
         }
       }}
     >
       <ModalHeader title={data.type} onClose={onClose} />
-      <DialogContent style={{ padding: '32px' }}>
+      <DialogContent style={{ padding: '0 32px 32px', color: '#111827', minHeight: '550px' }}>
         {data.type !== "Bank Transactions" && (
           <Box sx={{ 
             mb: 4, 
@@ -249,7 +248,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                 xAxis={[
                   {
                     data: getFormattedMonths(),
-                    valueFormatter: (value) => {
+                    valueFormatter: (value: Date) => {
                       return new Intl.DateTimeFormat("en-US", {
                         year: "numeric",
                         month: "short",
@@ -262,7 +261,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                 yAxis={[
                   {
                     tickLabelStyle: { fill: '#666' },
-                    valueFormatter: (value) => `₪${formatNumber(value)}`,
+                    valueFormatter: (value: number) => `${getCurrencySymbol()}${formatNumber(value)}`,
                   },
                 ]}
                 series={[
@@ -315,14 +314,15 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
         }}>
         <Table
           onClick={handleTableClick}
+          sx={{ tableLayout: 'fixed' }}
         >
           <TableHead>
             <TableRow>
-              <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '200px', maxWidth: '200px' }}>Description</TableCell>
-              <TableCell style={TABLE_HEADER_CELL_STYLE}>Category</TableCell>
-              <TableCell align="right" style={TABLE_HEADER_CELL_STYLE}>Amount</TableCell>
-              <TableCell style={TABLE_HEADER_CELL_STYLE}>Date</TableCell>
-              <TableCell align="center" style={{ ...TABLE_HEADER_CELL_STYLE, width: '120px' }}>Actions</TableCell>
+              <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '30%' }}>Description</TableCell>
+              <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '25%' }}>Category</TableCell>
+              <TableCell align="right" style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Amount</TableCell>
+              <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Date</TableCell>
+              <TableCell align="center" style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -446,8 +446,8 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                     />
                   ) : (
                     data.type === "Bank Transactions" 
-                      ? `${expense.price >= 0 ? '+' : ''}₪${formatNumber(Math.abs(expense.price))}`
-                      : `₪${formatNumber(Math.abs(expense.price))}`
+                      ? `${expense.price >= 0 ? '+' : ''}${getCurrencySymbol()}${formatNumber(Math.abs(expense.price))}`
+                      : `${getCurrencySymbol()}${formatNumber(Math.abs(expense.price))}`
                   )}
                 </TableCell>
                 <TableCell style={TABLE_BODY_CELL_STYLE}>

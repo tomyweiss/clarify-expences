@@ -1,7 +1,7 @@
 import React from 'react';
 import { SvgIconComponent } from '@mui/icons-material';
 import CircularProgress from '@mui/material/CircularProgress';
-import { formatNumber } from '../utils/format';
+import { formatNumber, getCurrencySymbol } from '../utils/format';
 
 interface CardProps {
   title: string;
@@ -33,42 +33,39 @@ const Card: React.FC<CardProps> = ({
   const titleSize = size === 'large' ? '16px' : '20px';
   const valueSize = size === 'large' ? '36px' : '24px';
   const secondaryValueSize = size === 'large' ? '20px' : '16px';
-  const iconSize = size === 'large' ? '24px' : '24px';
-  const iconPadding = size === 'large' ? '10px' : '12px';
+  const iconSize = size === 'large' ? '36px' : '32px';
+  const iconPadding = size === 'large' ? '14px' : '12px';
   const iconBorderRadius = size === 'large' ? '12px' : '16px';
 
   return (
     <div
       style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        borderRadius: '28px',
+        background: '#FFFFFF',
+        borderRadius: '12px',
         padding: padding,
         width: '100%',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        border: '1px solid rgba(148, 163, 184, 0.15)',
+        border: '1px solid #E5E7EB',
         cursor: onClick ? (isLoading ? 'default' : 'pointer') : 'default',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'all 0.2s ease-in-out'
       }}
       onClick={isLoading ? undefined : onClick}
       onMouseEnter={(e) => {
         if (!isLoading && onClick) {
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-8px) scale(1.03)';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = `0 12px 32px ${color}20`;
-          (e.currentTarget as HTMLDivElement).style.borderColor = `${color}80`;
-          (e.currentTarget as HTMLDivElement).style.background = 'rgba(255, 255, 255, 0.98)';
+          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
+          (e.currentTarget as HTMLDivElement).style.boxShadow = `0 4px 6px ${color}15`;
+          (e.currentTarget as HTMLDivElement).style.borderColor = `${color}40`;
         }
       }}
       onMouseLeave={(e) => {
         if (!isLoading) {
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0) scale(1)';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0, 0, 0, 0.04)';
-          (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(148, 163, 184, 0.15)';
-          (e.currentTarget as HTMLDivElement).style.background = 'rgba(255, 255, 255, 0.95)';
+          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          (e.currentTarget as HTMLDivElement).style.borderColor = '#E5E7EB';
         }
       }}
     >
@@ -84,95 +81,67 @@ const Card: React.FC<CardProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 2,
-          borderRadius: '24px'
+          borderRadius: '12px'
         }}>
           <CircularProgress size={40} style={{ color: color }} />
         </div>
       )}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: size === 'large' ? '140px' : '100px',
-        height: size === 'large' ? '140px' : '100px',
-        background: `radial-gradient(circle at top right, ${color}25, ${color}10 50%, transparent 70%)`,
-        opacity: size === 'large' ? 0.6 : 0.4,
-        filter: 'blur(20px)'
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        width: size === 'large' ? '100px' : '70px',
-        height: size === 'large' ? '100px' : '70px',
-        background: `radial-gradient(circle at bottom left, ${color}15, transparent 60%)`,
-        opacity: 0.3,
-        filter: 'blur(15px)'
-      }} />
+      
       <div style={{
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: size === 'large' ? 'center' : 'flex-start',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
         gap: '16px'
       }}>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ 
-            margin: '0 0 12px 0',
-            color: '#64748b',
-            fontSize: titleSize,
-            fontWeight: size === 'large' ? '600' : '700',
-            letterSpacing: size === 'large' ? 'normal' : '-0.01em',
-            fontFamily: 'Assistant, sans-serif',
-            textShadow: 'none'
-          }}>{title}</h3>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
-            <span style={{ 
-              fontSize: valueSize, 
-              fontWeight: size === 'large' ? '800' : '700', 
-              color: color,
-              letterSpacing: '-0.02em',
-              fontFamily: 'Assistant, sans-serif',
-              textShadow: `0 2px 12px ${color}60`
-            }}>
-              ₪{formatNumber(value || 0)}
-            </span>
-            {secondaryValue !== undefined && (
-              <>
-                <span style={{ 
-                  fontSize: valueSize, 
-                  fontWeight: size === 'large' ? '700' : '600', 
-                  color: '#E5E7EB',
-                  letterSpacing: '-0.02em',
-                  fontFamily: 'Assistant, sans-serif'
-                }}>
-                  |
-                </span>
-                <span style={{ 
-                  fontSize: valueSize, 
-                  fontWeight: size === 'large' ? '700' : '600', 
-                  color: secondaryColor || '#666',
-                  letterSpacing: '-0.02em',
-                  fontFamily: 'Assistant, sans-serif'
-                }}>
-                  {secondaryLabel && `${secondaryLabel}: `}₪{formatNumber(secondaryValue)}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
         <div style={{
-          background: `linear-gradient(135deg, ${color}40 0%, ${color}25 100%)`,
-          borderRadius: iconBorderRadius,
+          background: `${color}15`,
+          borderRadius: '12px',
           padding: iconPadding,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: `0 6px 20px ${color}40`,
-          border: `1px solid ${color}50`,
           position: 'relative',
-          zIndex: 1
+          zIndex: 1,
+          flexShrink: 0
         }}>
-          <Icon sx={{ fontSize: iconSize, color: color, filter: `drop-shadow(0 2px 8px ${color}60)` }} />
+          <Icon sx={{ fontSize: iconSize, color: color }} />
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <h3 style={{ 
+            margin: '0 0 4px 0',
+            color: '#6B7280',
+            fontSize: '13px',
+            fontWeight: '600',
+          }}>{title}</h3>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ 
+              fontSize: valueSize, 
+              fontWeight: '700', 
+              color: '#111827',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2
+            }}>
+              {getCurrencySymbol()}{formatNumber(value || 0)}
+            </span>
+            {secondaryValue !== undefined && (
+              <>
+                <span style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '500', 
+                  color: '#D1D5DB',
+                }}>
+                  |
+                </span>
+                <span style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  color: secondaryColor || '#6B7280',
+                }}>
+                  {secondaryLabel && `${secondaryLabel}: `}${formatNumber(secondaryValue)}
+                </span>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
