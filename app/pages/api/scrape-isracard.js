@@ -12,7 +12,8 @@ import {
   getChromePath,
   getLaunchArgs,
   createAuditEntry,
-  updateAuditEntry
+  updateAuditEntry,
+  isHeadless
 } from './scraper-utils';
 
 puppeteerExtra.use(StealthPlugin());
@@ -351,37 +352,19 @@ async function scrapeCardMonth(page, month, year, cardSuffix, downloadDir) {
   return transactions;
 }
 
-// --- Handler ---
+// --- Background scrape job ---
 
-async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
+async function runIsracardScrapeInBackground(options, credentials, auditId) {
   const client = await getDB();
-  let auditId;
   let browser;
   const downloadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'isracard-'));
 
   try {
-    const { options, credentials } = req.body;
-
-    // Validate credentials
-    if (!credentials.id || !credentials.password) {
-      throw new Error('ID and password are required for Isracard scraping');
-    }
-
     const cardSuffixes = options.cardSuffixes || [];
-    if (cardSuffixes.length === 0) {
-      throw new Error('At least one card suffix is required for Isracard scraping');
-    }
-
-    const triggeredBy = credentials.id || credentials.nickname || 'unknown';
-    auditId = await createAuditEntry(client, triggeredBy, 'isracard', options.startDate);
 
     // Launch browser
     browser = await puppeteerExtra.launch({
-      headless: false,
+      headless: isHeadless(options),
       executablePath: getChromePath(),
       args: getLaunchArgs(),
     });
@@ -422,28 +405,17 @@ async function handler(req, res) {
     const message = `Success: cards=${cardSuffixes.length}, months=${months.length}, transactions=${totalTransactions}`;
     console.log(message);
     await updateAuditEntry(client, auditId, 'success', message);
-
-    res.status(200).json({
-      message: 'Isracard scraping completed successfully',
-      totalTransactions,
-      monthsScraped: months.length,
-    });
   } catch (error) {
-    console.error('Isracard scraping failed:', error);
+    console.error('Background Isracard scraping failed:', error);
     try {
       await updateAuditEntry(client, auditId, 'failed', error instanceof Error ? error.message : 'Unknown error');
     } catch (e) {
       // noop
     }
-    res.status(500).json({
-      message: 'Isracard scraping failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
   } finally {
     if (browser) {
       try { await browser.close(); } catch (e) { /* noop */ }
     }
-    // Cleanup download dir
     try {
       fs.rmSync(downloadDir, { recursive: true, force: true });
     } catch (e) { /* noop */ }
@@ -451,4 +423,57 @@ async function handler(req, res) {
   }
 }
 
+// --- Handler ---
+
+async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  const client = await getDB();
+  try {
+    const { options, credentials } = req.body;
+
+    // Validate credentials synchronously before responding
+    if (!credentials.id || !credentials.password) {
+      client.release();
+      return res.status(400).json({ message: 'ID and password are required for Isracard scraping' });
+    }
+
+    const cardSuffixes = options.cardSuffixes || [];
+    if (cardSuffixes.length === 0) {
+      client.release();
+      return res.status(400).json({ message: 'At least one card suffix is required for Isracard scraping' });
+    }
+
+    // Create audit entry so the client can track progress
+    const triggeredBy = credentials.id || credentials.nickname || 'unknown';
+    const auditId = await createAuditEntry(client, triggeredBy, 'isracard', options.startDate);
+
+    // Release validation connection
+    client.release();
+
+    // Respond immediately — scraping runs in the background
+    res.status(202).json({
+      message: 'Isracard scraping started in background',
+      auditId,
+      vendor: 'isracard',
+    });
+
+    // Fire and forget
+    runIsracardScrapeInBackground(options, credentials, auditId).catch(err => {
+      console.error('Unhandled background Isracard scrape error:', err);
+    });
+
+  } catch (error) {
+    console.error('Isracard handler error:', error);
+    client.release();
+    res.status(500).json({
+      message: 'Failed to start Isracard scraping',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
 export default withAuth(handler);
+

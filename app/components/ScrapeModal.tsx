@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
@@ -9,6 +9,8 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 import { useNotification } from './NotificationContext';
 import ModalHeader from './ModalHeader';
 import { BEINLEUMI_GROUP_VENDORS, STANDARD_BANK_VENDORS } from '../utils/constants';
@@ -44,6 +46,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
   const [error, setError] = useState<string | null>(null);
   const [cardSuffixesText, setCardSuffixesText] = useState('');
   const { showNotification } = useNotification();
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const lastKnownEventIdRef = useRef<number | null>(null);
   const todayStr = new Date().toISOString().split('T')[0];
   const clampDateString = (value: string) => (value > todayStr ? todayStr : value);
   const defaultConfig: ScraperConfig = {
@@ -51,7 +55,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       companyId: 'isracard',
       startDate: new Date(),
       combineInstallments: false,
-      showBrowser: true,
+      showBrowser: false,
       additionalTransactionInformation: true,
       cardSuffixes: []
     },
@@ -82,6 +86,75 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
     }
   }, [isOpen, initialConfig]);
 
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, []);
+
+  const startPollingForResult = useCallback((vendor: string, nickname: string) => {
+    // Store the latest event ID before starting so we only look for new events
+    fetch('/api/scrape_events?limit=1')
+      .then(res => res.json())
+      .then(events => {
+        if (events.length > 0) {
+          lastKnownEventIdRef.current = events[0].id;
+        }
+      })
+      .catch(() => {});
+
+    // Poll every 5 seconds for the result
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/scrape_events?limit=5');
+        if (!res.ok) return;
+        const events = await res.json();
+        
+        // Find a new event matching our vendor that was created after we started
+        const matchingEvent = events.find((e: any) => {
+          const isNew = lastKnownEventIdRef.current === null || e.id > lastKnownEventIdRef.current;
+          const matchesVendor = e.vendor === vendor;
+          const isTerminal = e.status === 'success' || e.status === 'failed';
+          return isNew && matchesVendor && isTerminal;
+        });
+
+        if (matchingEvent) {
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+
+          if (matchingEvent.status === 'success') {
+            showNotification(
+              `✅ Scraping completed for ${nickname || vendor}! Data has been refreshed.`,
+              'success'
+            );
+            onSuccess?.();
+          } else {
+            showNotification(
+              `❌ Scraping failed for ${nickname || vendor}: ${matchingEvent.message || 'Unknown error'}`,
+              'error'
+            );
+          }
+        }
+      } catch (err) {
+        // Silently continue polling
+      }
+    }, 5000);
+
+    // Stop polling after 5 minutes as a safety net
+    setTimeout(() => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    }, 5 * 60 * 1000);
+  }, [showNotification, onSuccess]);
+
   const handleConfigChange = (field: string, value: any) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
@@ -108,6 +181,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       const endpoint = config.options.companyId === 'isracard'
         ? '/api/scrape-isracard'
         : '/api/scrape';
+
+      // Fire the request but don't await the full scrape — it runs in background on the server
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -116,17 +191,26 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         body: JSON.stringify(config)
       });
 
+      // The scrape API responds immediately if there's a validation error,
+      // otherwise it runs in the background
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error || body.message || `Failed to start scraping (${response.status})`);
       }
 
-      showNotification('Scraping process started successfully!', 'success');
+      const vendorName = config.credentials.nickname || config.options.companyId;
+      showNotification(
+        `🔄 Scraping started for ${vendorName}. You'll be notified when it's done.`,
+        'info'
+      );
+
+      // Start polling for result
+      startPollingForResult(config.options.companyId, vendorName);
+
+      // Close the modal immediately — scraping continues in the background
       onClose();
-      onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -251,18 +335,47 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
 
   const renderExistingAccountForm = () => (
     <>
-      <TextField
-        label="Account Nickname"
-        value={config.credentials.nickname}
-        disabled
-        fullWidth
-      />
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        p: 2,
+        mb: 1,
+        background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+        borderRadius: '12px',
+        border: '1px solid #C7D2FE',
+      }}>
+        <Box sx={{
+          width: 40,
+          height: 40,
+          borderRadius: '10px',
+          background: '#6366F1',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          fontWeight: 700,
+          fontSize: '16px',
+        }}>
+          {(config.credentials.nickname || config.options.companyId || '?')[0].toUpperCase()}
+        </Box>
+        <Box>
+          <Typography sx={{ fontWeight: 600, fontSize: '15px', color: '#1E1B4B' }}>
+            {config.credentials.nickname || 'Account'}
+          </Typography>
+          <Typography sx={{ fontSize: '13px', color: '#6366F1', fontWeight: 500 }}>
+            {config.options.companyId}
+          </Typography>
+        </Box>
+      </Box>
+
       {config.credentials.username && (
         <TextField
           label="Username"
           value={config.credentials.username}
           disabled
           fullWidth
+          size="small"
         />
       )}
       {config.credentials.id && (
@@ -271,6 +384,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           value={config.credentials.id}
           disabled
           fullWidth
+          size="small"
         />
       )}
       {config.credentials.card6Digits && (
@@ -279,6 +393,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           value={config.credentials.card6Digits}
           disabled
           fullWidth
+          size="small"
         />
       )}
       {config.credentials.bankAccountNumber && (
@@ -287,6 +402,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           value={config.credentials.bankAccountNumber}
           disabled
           fullWidth
+          size="small"
         />
       )}
 
@@ -296,6 +412,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           value={(config.options.cardSuffixes || []).join(', ') || '—'}
           disabled
           fullWidth
+          size="small"
         />
       )}
 
@@ -371,6 +488,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           onClick={handleScrape}
           variant="contained"
           disabled={isLoading}
+          startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : undefined}
           sx={{
             backgroundColor: '#6366F1',
             borderRadius: '8px',
@@ -390,7 +508,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
             }
           }}
         >
-          {isLoading ? 'Scraping...' : 'SCRAPE'}
+          {isLoading ? 'Starting...' : 'SCRAPE'}
         </Button>
       </DialogActions>
     </Dialog>

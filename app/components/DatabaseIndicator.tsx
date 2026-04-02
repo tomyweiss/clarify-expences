@@ -11,7 +11,6 @@ const Indicator = styled('div')(({ theme }) => ({
   padding: '6px',
   borderRadius: '8px',
   transition: 'all 0.2s ease-in-out',
-  cursor: 'pointer',
   '&:hover': {
     backgroundColor: '#F3F4F6',
   },

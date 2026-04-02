@@ -134,6 +134,13 @@ export function getLaunchArgs() {
   ];
 }
 
+export function isHeadless(options) {
+  if (options && typeof options.showBrowser !== 'undefined') {
+    return !options.showBrowser;
+  }
+  return process.env.SCRAPE_HEADLESS !== 'false';
+}
+
 export async function createAuditEntry(client, triggeredBy, vendor, startDate) {
   const result = await client.query(
     `INSERT INTO scrape_events (triggered_by, vendor, start_date, status, message)

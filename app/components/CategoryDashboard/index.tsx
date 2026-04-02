@@ -123,6 +123,15 @@ const CategoryDashboard: React.FC = () => {
       
       // Sort dates in descending order to get the most recent first
       const sortedDates = transactionsData.sort((a: string, b: string) => b.localeCompare(a));
+      
+      if (sortedDates.length === 0) {
+        setUniqueYears([]);
+        setUniqueMonths([]);
+        setSelectedYear("");
+        setSelectedMonth("");
+        return;
+      }
+
       const lastDate = sortedDates[0];
       
       const years = Array.from(new Set(transactionsData.map((date: string) => date.substring(0, 4)))) as string[];

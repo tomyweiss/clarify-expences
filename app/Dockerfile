@@ -2,6 +2,11 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# Set environment variables to optimize build and handle Puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    NODE_OPTIONS="--max-old-space-size=4096"
+
 # Install dependencies required by Chromium
 RUN apt-get update && apt-get install -y \
     ca-certificates \
@@ -49,12 +54,26 @@ RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
     && mkdir -p /home/pptruser/Downloads \
     && chown -R pptruser:pptruser /home/pptruser
 
+# Copy package management files FIRST to leverage layer caching
+COPY package.json package-lock.json* yarn.lock* ./
+
+# Install dependencies with legacy-peer-deps to handle potential conflicts
+RUN npm install --legacy-peer-deps --no-audit --no-fund
+
+# Now copy the rest of the source code
 COPY . .
 
-# Install dependencies and build as root
-RUN npm install && \
-    npm run build && \
-    chown -R pptruser:pptruser /app
+# Fix for broken .env symlinks (target is missing in Docker context)
+RUN if [ -L .env ] && [ ! -e .env ]; then \
+        echo "Fixing broken .env symlink..."; \
+        rm .env && touch .env; \
+    fi
+
+# Build the Next.js application
+RUN npm run build
+
+# Change ownership of the app directory to pptruser
+RUN chown -R pptruser:pptruser /app
 
 # Create startup script
 RUN echo '#!/bin/sh\n\
