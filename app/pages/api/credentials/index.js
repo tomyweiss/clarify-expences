@@ -29,8 +29,8 @@ const handler = createAuthenticatedApiHandler({
         };
       }
       if (req.method === 'POST') {
-        const { vendor, username, password, id_number, card6_digits, nickname, bank_account_number } = req.body;
-        
+        const { vendor, username, password, id_number, card6_digits, card_suffixes, nickname, bank_account_number } = req.body;
+
         // Encrypt sensitive data
         const encryptedData = {
           vendor,
@@ -38,14 +38,15 @@ const handler = createAuthenticatedApiHandler({
           password: password ? encrypt(password) : null,
           id_number: id_number ? encrypt(id_number) : null,
           card6_digits: card6_digits ? encrypt(card6_digits) : null,
+          card_suffixes: card_suffixes || null,
           nickname,
           bank_account_number
         };
 
         return {
           sql: `
-            INSERT INTO vendor_credentials (vendor, username, password, id_number, card6_digits, nickname, bank_account_number)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO vendor_credentials (vendor, username, password, id_number, card6_digits, card_suffixes, nickname, bank_account_number)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
           `,
           params: [
@@ -54,6 +55,7 @@ const handler = createAuthenticatedApiHandler({
             encryptedData.password,
             encryptedData.id_number,
             encryptedData.card6_digits,
+            encryptedData.card_suffixes,
             encryptedData.nickname,
             encryptedData.bank_account_number
           ]
@@ -73,6 +75,7 @@ const handler = createAuthenticatedApiHandler({
         // password field is omitted for security
         id_number: row.id_number ? decrypt(row.id_number) : null,
         card6_digits: row.card6_digits ? decrypt(row.card6_digits) : null,
+        card_suffixes: row.card_suffixes || null,
         nickname: row.nickname,
         bank_account_number: row.bank_account_number,
         created_at: row.created_at

@@ -50,6 +50,7 @@ Personal finance management app for tracking income, expenses, and bank transact
 
 3. **Run**
    ```bash
+   cd app
    npm run dev
    ```
    Open http://localhost:3000

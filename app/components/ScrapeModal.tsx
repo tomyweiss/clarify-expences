@@ -20,6 +20,7 @@ interface ScraperConfig {
     combineInstallments: boolean;
     showBrowser: boolean;
     additionalTransactionInformation: boolean;
+    cardSuffixes?: string[];
   };
   credentials: {
     id?: string;
@@ -41,6 +42,7 @@ interface ScrapeModalProps {
 export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig }: ScrapeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cardSuffixesText, setCardSuffixesText] = useState('');
   const { showNotification } = useNotification();
   const todayStr = new Date().toISOString().split('T')[0];
   const clampDateString = (value: string) => (value > todayStr ? todayStr : value);
@@ -50,7 +52,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       startDate: new Date(),
       combineInstallments: false,
       showBrowser: true,
-      additionalTransactionInformation: true
+      additionalTransactionInformation: true,
+      cardSuffixes: []
     },
     credentials: {
       id: '',
@@ -66,12 +69,14 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
   useEffect(() => {
     if (initialConfig) {
       setConfig(initialConfig);
+      setCardSuffixesText((initialConfig.options.cardSuffixes || []).join(', '));
     }
   }, [initialConfig]);
 
   useEffect(() => {
     if (!isOpen) {
       setConfig(initialConfig || defaultConfig);
+      setCardSuffixesText((initialConfig?.options.cardSuffixes || []).join(', '));
       setError(null);
       setIsLoading(false);
     }
@@ -100,7 +105,10 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
     setError(null);
 
     try {
-      const response = await fetch('/api/scrape', {
+      const endpoint = config.options.companyId === 'isracard'
+        ? '/api/scrape-isracard'
+        : '/api/scrape';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +117,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start scraping');
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || body.message || `Failed to start scraping (${response.status})`);
       }
 
       showNotification('Scraping process started successfully!', 'success');
@@ -205,6 +214,25 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         fullWidth
       />
 
+      {config.options.companyId === 'isracard' && (
+        <TextField
+          label="Card Suffixes"
+          value={cardSuffixesText}
+          onChange={(e) => setCardSuffixesText(e.target.value)}
+          onBlur={() => {
+            const suffixes = cardSuffixesText
+              .split(',')
+              .map(s => s.trim())
+              .filter(s => s.length > 0);
+            handleConfigChange('options.cardSuffixes', suffixes);
+            setCardSuffixesText(suffixes.join(', '));
+          }}
+          fullWidth
+          placeholder="e.g. 1111, 2222"
+          helperText="Last 4 digits of each card, comma-separated"
+        />
+      )}
+
       <TextField
         label="Start Date"
         type="date"
@@ -257,6 +285,15 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         <TextField
           label="Bank Account Number"
           value={config.credentials.bankAccountNumber}
+          disabled
+          fullWidth
+        />
+      )}
+
+      {config.options.companyId === 'isracard' && (
+        <TextField
+          label="Card Suffixes"
+          value={(config.options.cardSuffixes || []).join(', ') || '—'}
           disabled
           fullWidth
         />

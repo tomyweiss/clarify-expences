@@ -32,6 +32,7 @@ interface Account {
   username?: string;
   id_number?: string;
   card6_digits?: string;
+  card_suffixes?: string;
   bank_account_number?: string;
   nickname?: string;
   // SECURITY: password field removed - fetched separately when needed
@@ -92,6 +93,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
     username: '',
     id_number: '',
     card6_digits: '',
+    card_suffixes: '',
     bank_account_number: '',
     password: '',
     nickname: '',
@@ -185,6 +187,7 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
           username: '',
           id_number: '',
           card6_digits: '',
+          card_suffixes: '',
           bank_account_number: '',
           password: '',
           nickname: '',
@@ -555,6 +558,17 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
                   margin="normal"
                 />
               )}
+              {newAccount.vendor === 'isracard' && (
+                <TextField
+                  fullWidth
+                  label="Card Suffixes"
+                  value={newAccount.card_suffixes}
+                  onChange={(e) => setNewAccount({ ...newAccount, card_suffixes: e.target.value })}
+                  margin="normal"
+                  placeholder="e.g. 1111, 2222"
+                  helperText="Last 4 digits of each card, comma-separated"
+                />
+              )}
               <TextField
                 fullWidth
                 label="Password"
@@ -635,7 +649,10 @@ export default function AccountsModal({ isOpen, onClose }: AccountsModalProps) {
             startDate: new Date(),
             combineInstallments: false,
             showBrowser: true,
-            additionalTransactionInformation: true
+            additionalTransactionInformation: true,
+            cardSuffixes: selectedAccount.card_suffixes
+              ? selectedAccount.card_suffixes.split(',').map((s: string) => s.trim()).filter(Boolean)
+              : []
           },
           credentials: {
             id: selectedAccount.id_number,

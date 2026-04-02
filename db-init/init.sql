@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS vendor_credentials (
 	vendor VARCHAR(100) NOT NULL,
     password VARCHAR(100),
     card6_digits VARCHAR(100),
+    card_suffixes VARCHAR(200),
     nickname VARCHAR(100),
 	bank_account_number VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

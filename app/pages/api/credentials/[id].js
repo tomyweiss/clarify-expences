@@ -50,6 +50,7 @@ const handler = createAuthenticatedApiHandler({
         password: row.password ? decrypt(row.password) : null,
         id_number: row.id_number ? decrypt(row.id_number) : null,
         card6_digits: row.card6_digits ? decrypt(row.card6_digits) : null,
+        card_suffixes: row.card_suffixes || null,
         nickname: row.nickname,
         bank_account_number: row.bank_account_number,
         created_at: row.created_at
