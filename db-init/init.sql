@@ -60,3 +60,43 @@ CREATE TABLE IF NOT EXISTS scrape_events (
 );
 CREATE INDEX IF NOT EXISTS idx_scrape_events_created_at ON scrape_events(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scrape_events_vendor ON scrape_events(vendor);
+
+-- Savings table
+CREATE TABLE IF NOT EXISTS savings (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL, -- פיקדון, קופת גמל להשקעה, קרן השתלמות
+    amount FLOAT NOT NULL,
+    currency VARCHAR(3) NOT NULL DEFAULT 'ILS',
+    date_created DATE NOT NULL,
+    institution VARCHAR(100) NOT NULL,
+    risk_level VARCHAR(50),
+    notes TEXT,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Trigger to update last_updated
+CREATE OR REPLACE FUNCTION update_last_updated_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_updated = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_savings_last_updated
+    BEFORE UPDATE ON savings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_updated_column();
+
+-- Recurrent transactions table
+CREATE TABLE IF NOT EXISTS recurrent_transactions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    amount FLOAT NOT NULL,
+    category VARCHAR(50),
+    start_date DATE NOT NULL,
+    end_date DATE,
+    type VARCHAR(20) NOT NULL DEFAULT 'expense',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -4,16 +4,12 @@ import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import SettingsIcon from '@mui/icons-material/Settings';
-import StorageIcon from '@mui/icons-material/Storage';
 import LogoutIcon from '@mui/icons-material/Logout';
-import ScrapeModal from './ScrapeModal';
 import { useNotification } from './NotificationContext';
 import { useAuth } from './AuthContext';
-
+import { useRouter } from 'next/router';
 import ManagementModal, { ManagementTab } from './ManagementModal';
-
 import SecurityIcon from '@mui/icons-material/Security';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 
@@ -51,7 +47,7 @@ const NavSection = styled(Box)({
   gap: '2px',
 });
 
-const NavItem = styled(Box)<{ active?: boolean }>(({ active }) => ({
+const NavItem = styled(Box, { shouldForwardProp: (prop) => prop !== 'active' })<{ active?: boolean }>(({ active }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
@@ -135,12 +131,24 @@ interface AppShellProps {
 }
 
 function AppShell({ children }: AppShellProps) {
-  const [activeMainView, setActiveMainView] = React.useState<'finance' | 'insurance' | 'savings'>('finance');
+  const router = useRouter();
   const [managementModalOpen, setManagementModalOpen] = React.useState(false);
   const [managementTab, setManagementTab] = React.useState<ManagementTab>('accounts');
-  const [isScrapeModalOpen, setIsScrapeModalOpen] = React.useState(false);
   const { showNotification } = useNotification();
   const { logout } = useAuth();
+
+  const handleOpenManagement = (tab: ManagementTab) => {
+    setManagementTab(tab);
+    setManagementModalOpen(true);
+  };
+
+  React.useEffect(() => {
+    const handleOpenManagementEvent = () => {
+      handleOpenManagement('accounts');
+    };
+    window.addEventListener('openManagement', handleOpenManagementEvent);
+    return () => window.removeEventListener('openManagement', handleOpenManagementEvent);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -149,11 +157,6 @@ function AppShell({ children }: AppShellProps) {
     } catch (error) {
       showNotification('Logout failed', 'error');
     }
-  };
-
-  const handleOpenManagement = (tab: ManagementTab) => {
-    setManagementTab(tab);
-    setManagementModalOpen(true);
   };
 
   const handleManualSave = async (data: any) => {
@@ -174,7 +177,7 @@ function AppShell({ children }: AppShellProps) {
   return (
     <>
       <SidebarContainer>
-        <LogoSection onClick={() => { setActiveMainView('finance'); setManagementModalOpen(false); }}>
+        <LogoSection onClick={() => { router.push('/'); setManagementModalOpen(false); }}>
           <AccountBalanceWalletIcon sx={{ fontSize: '24px', color: '#6366F1' }} />
           <Typography sx={{
             fontFamily: "'Inter', sans-serif",
@@ -188,21 +191,22 @@ function AppShell({ children }: AppShellProps) {
         </LogoSection>
 
         <NavSection>
-          <NavItem active={activeMainView === 'finance' && !managementModalOpen} onClick={() => { setActiveMainView('finance'); setManagementModalOpen(false); }}>
+          <NavItem active={router.pathname === '/' && !managementModalOpen} onClick={() => { router.push('/'); setManagementModalOpen(false); }}>
             <DashboardIcon />
             Finance
           </NavItem>
+          
+          <NavItem active={router.pathname === '/savings' && !managementModalOpen} onClick={() => { router.push('/savings'); setManagementModalOpen(false); }}>
+            <TrendingUpIcon />
+            Savings
+          </NavItem>
 
-          <NavItem active={activeMainView === 'insurance' && !managementModalOpen} onClick={() => { setActiveMainView('insurance'); setManagementModalOpen(false); }}>
+          <NavItem active={router.pathname === '/insurance' && !managementModalOpen} onClick={() => { router.push('/insurance'); setManagementModalOpen(false); }}>
             <SecurityIcon />
             Insurance
           </NavItem>
 
-          <NavItem active={activeMainView === 'savings' && !managementModalOpen} onClick={() => { setActiveMainView('savings'); setManagementModalOpen(false); }}>
-            <TrendingUpIcon />
-            Savings
-          </NavItem>
-          
+
           <Box sx={{ height: '1px', bgcolor: '#E5E7EB', my: 1, mx: 1.5, opacity: 0.6 }} />
 
           <NavItem active={managementModalOpen} onClick={() => handleOpenManagement('accounts')}>
@@ -222,11 +226,7 @@ function AppShell({ children }: AppShellProps) {
       </SidebarContainer>
 
       <MainContent>
-        {activeMainView === 'finance' ? children : (
-          activeMainView === 'insurance' 
-            ? <ComingSoonPlaceholder title="Insurance Portfolio" icon={<SecurityIcon />} />
-            : <ComingSoonPlaceholder title="Savings & Goals" icon={<TrendingUpIcon />} />
-        )}
+        {children}
       </MainContent>
 
       <ManagementModal 
@@ -238,10 +238,8 @@ function AppShell({ children }: AppShellProps) {
         onCategoriesUpdated={() => window.dispatchEvent(new CustomEvent('dataRefresh'))}
       />
 
-      <ScrapeModal isOpen={isScrapeModalOpen} onClose={() => setIsScrapeModalOpen(false)} />
     </>
   );
 }
 
-export { MainContent, SIDEBAR_WIDTH };
 export default AppShell;

@@ -64,7 +64,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
       {/* Header */}
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: 'minmax(200px, 2fr) 140px 120px 100px 90px', 
+        gridTemplateColumns: '240px 140px 120px 100px 90px', 
         px: 3, 
         pb: 1.5, 
         borderBottom: '1px solid rgba(229, 231, 235, 0.5)' 
@@ -87,7 +87,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
             key={tx.identifier}
             sx={{
               display: 'grid',
-              gridTemplateColumns: 'minmax(200px, 2fr) 140px 120px 100px 90px',
+              gridTemplateColumns: '240px 140px 120px 100px 90px',
               alignItems: 'center',
               px: 3,
               py: 1.5,

@@ -333,7 +333,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
-            <Box sx={{ flex: 1.5 }}>Description</Box>
+            <Box sx={{ width: '240px', flex: '0 0 240px' }}>Description</Box>
             <Box sx={{ flex: 1 }}>Category</Box>
             <Box sx={{ flex: 1, textAlign: 'right' }}>Amount</Box>
             <Box sx={{ flex: 1, textAlign: 'center' }}>Date</Box>
@@ -364,7 +364,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                   }}
                 >
                   {/* Description */}
-                  <Box sx={{ flex: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ width: '240px', flex: '0 0 240px', display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ 
                       width: 32, 
                       height: 32, 

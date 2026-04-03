@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Chip, TextField, IconButton, Button, Tabs, Tab,
   FormControl, InputLabel, Select, MenuItem, Card, Switch,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
 } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -9,12 +10,14 @@ import CategoryIcon from '@mui/icons-material/Category';
 import RuleIcon from '@mui/icons-material/Rule';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useCategoryColors } from '../CategoryDashboard/utils/categoryUtils';
 import { useNotification } from '../NotificationContext';
 
 interface Category { name: string; count: number; }
-interface CategorizationRule { id: number; name_pattern: string; target_category: string; is_active: boolean; }
+interface CategorizationRule { id: number; name_pattern: string; target_category: string; is_active: boolean; match_count?: number; }
 
 interface DataPageProps {
   onManualSave?: (data: any) => void;
@@ -38,27 +41,38 @@ const DataPage: React.FC<DataPageProps> = ({ onManualSave, onCategoriesUpdated }
   const [mergeName, setMergeName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Rules
   const [rules, setRules] = useState<CategorizationRule[]>([]);
   const [newRule, setNewRule] = useState({ name_pattern: '', target_category: '' });
   const [isApplying, setIsApplying] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState<number | null>(null);
+  const [editRuleData, setEditRuleData] = useState({ name_pattern: '', target_category: '' });
 
-  useEffect(() => { fetchCategories(); fetchRules(); }, []);
+  useEffect(() => { 
+    fetchCategories(); 
+    fetchRules(); 
+
+    const handleRefresh = () => {
+      fetchCategories();
+      fetchRules();
+    };
+
+    window.addEventListener('dataRefresh', handleRefresh);
+    return () => window.removeEventListener('dataRefresh', handleRefresh);
+  }, []);
 
   const fetchCategories = async () => {
     setIsLoading(true);
     try {
       const resp = await fetch('/api/get_all_categories');
       if (resp.ok) {
-        const names = await resp.json();
-        const cats = await Promise.all(names.map(async (name: string) => {
-          const r = await fetch(`/api/category_expenses?month=all&category=${encodeURIComponent(name)}`);
-          const txs = await r.json();
-          return { name, count: Array.isArray(txs) ? txs.length : 0 };
-        }));
-        setCategories(cats.sort((a, b) => b.count - a.count));
+        const cats = await resp.json();
+        setCategories(cats.sort((a: Category, b: Category) => b.count - a.count));
       }
-    } finally { setIsLoading(false); }
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fetchRules = async () => {
@@ -84,7 +98,7 @@ const DataPage: React.FC<DataPageProps> = ({ onManualSave, onCategoriesUpdated }
 
   const handleRuleOp = async (method: string, body?: any) => {
     const r = await fetch('/api/categorization_rules', { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
-    if (r.ok) { showNotification('Done', 'success'); fetchRules(); setNewRule({ name_pattern: '', target_category: '' }); }
+    if (r.ok) { showNotification('Done', 'success'); fetchRules(); setNewRule({ name_pattern: '', target_category: '' }); setEditingRuleId(null); }
   };
 
   const handleApplyRules = async () => {
@@ -162,31 +176,131 @@ const DataPage: React.FC<DataPageProps> = ({ onManualSave, onCategoriesUpdated }
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Box sx={{ background: '#fff', borderRadius: '12px', border: '1px solid #E5E7EB', p: 3 }}>
               <Typography sx={{ fontWeight: 600, mb: 2 }}>Create Rule</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 2 }}>
-                <TextField size="small" label="Pattern" value={newRule.name_pattern} onChange={(e) => setNewRule({ ...newRule, name_pattern: e.target.value })} />
-                <TextField size="small" label="Category" value={newRule.target_category} onChange={(e) => setNewRule({ ...newRule, target_category: e.target.value })} />
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 2 }}>
+                <TextField 
+                  size="small" 
+                  label="Pattern" 
+                  value={newRule.name_pattern} 
+                  onChange={(e) => setNewRule({ ...newRule, name_pattern: e.target.value })} 
+                  onKeyDown={(e) => e.key === 'Enter' && handleRuleOp('POST', newRule)}
+                />
+                <TextField 
+                  size="small" 
+                  label="Category" 
+                  value={newRule.target_category} 
+                  onChange={(e) => setNewRule({ ...newRule, target_category: e.target.value })} 
+                  onKeyDown={(e) => e.key === 'Enter' && handleRuleOp('POST', newRule)}
+                />
                 <Button variant="contained" color="success" onClick={() => handleRuleOp('POST', newRule)} sx={{ boxShadow: 'none' }}><AddIcon /></Button>
+                <Button variant="outlined" color="inherit" onClick={() => setNewRule({ name_pattern: '', target_category: '' })} sx={{ borderColor: '#E2E8F0', color: '#94A3B8' }}>Clear</Button>
               </Box>
-              <Button startIcon={<PlayArrowIcon />} onClick={handleApplyRules} disabled={isApplying} sx={{ mt: 2, textTransform: 'none' }}>
-                {isApplying ? 'Applying...' : 'Apply Rules to History'}
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', px: 1 }}>
+              <Button 
+                startIcon={<PlayArrowIcon />} 
+                onClick={handleApplyRules} 
+                disabled={isApplying} 
+                sx={{ textTransform: 'none', color: '#6366F1', '&:hover': { background: '#EEF2FF' } }}
+              >
+                {isApplying ? 'Applying Rules...' : 'Apply Rules to History'}
               </Button>
             </Box>
-            <Box sx={{ background: '#fff', borderRadius: '12px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-              {rules.length === 0 ? (
-                <Box sx={{ p: 4, textAlign: 'center', color: '#6B7280' }}>No rules yet</Box>
-              ) : rules.map(rule => (
-                <Box key={rule.id} sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6', '&:last-child': { borderBottom: 'none' } }}>
-                  <Box>
-                    <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>"{rule.name_pattern}"</Typography>
-                    <Typography sx={{ fontSize: '11px', color: '#64748b' }}>→ {rule.target_category}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Switch checked={rule.is_active} onChange={(e) => handleRuleOp('PUT', { ...rule, is_active: e.target.checked })} size="small" />
-                    <IconButton size="small" color="error" onClick={() => handleRuleOp('DELETE', { id: rule.id })}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton>
-                  </Box>
-                </Box>
-              ))}
-            </Box>
+            <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden' }}>
+              <Table>
+                <TableHead sx={{ bgcolor: '#F8FAFC' }}>
+                  <TableRow>
+                    <TableCell sx={{ color: '#64748B', fontWeight: 600 }}>Pattern</TableCell>
+                    <TableCell sx={{ color: '#64748B', fontWeight: 600 }}>Target Category</TableCell>
+                    <TableCell align="center" sx={{ color: '#64748B', fontWeight: 600 }}>Matches</TableCell>
+                    <TableCell align="right" sx={{ color: '#64748B', fontWeight: 600, width: '100px' }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rules.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center" sx={{ py: 4, color: '#6B7280' }}>No rules configured yet</TableCell>
+                    </TableRow>
+                  ) : rules.map(rule => {
+                    const isEditing = editingRuleId === rule.id;
+                    return (
+                      <TableRow 
+                        key={rule.id} 
+                        onClick={() => {
+                          if (!isEditing) {
+                            setEditingRuleId(rule.id);
+                            setEditRuleData({ name_pattern: rule.name_pattern, target_category: rule.target_category });
+                          }
+                        }}
+                        sx={{ 
+                          '&:hover': { bgcolor: '#F8FAFC' }, 
+                          transition: 'background-color 0.2s',
+                          cursor: isEditing ? 'default' : 'pointer'
+                        }}
+                      >
+                        <TableCell sx={{ fontWeight: 600, color: '#1E293B', fontSize: '14px' }}>
+                          {isEditing ? (
+                            <TextField 
+                              size="small" 
+                              fullWidth 
+                              value={editRuleData.name_pattern} 
+                              onChange={(e) => setEditRuleData({ ...editRuleData, name_pattern: e.target.value })} 
+                              variant="standard" 
+                              autoFocus 
+                              InputProps={{ disableUnderline: true }}
+                              sx={{ '& .MuiInputBase-input': { p: '4px 8px', bgcolor: '#FFF', borderRadius: '6px', border: '1px solid #6366F1' } }}
+                            />
+                          ) : (
+                            `"${rule.name_pattern}"`
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <TextField 
+                              size="small" 
+                              fullWidth 
+                              value={editRuleData.target_category} 
+                              onChange={(e) => setEditRuleData({ ...editRuleData, target_category: e.target.value })} 
+                              variant="standard" 
+                              InputProps={{ disableUnderline: true }}
+                              sx={{ '& .MuiInputBase-input': { p: '4px 8px', bgcolor: '#FFF', borderRadius: '6px', border: '1px solid #6366F1' } }}
+                            />
+                          ) : (
+                            <Chip label={rule.target_category} size="small" sx={{ bgcolor: '#EEF2FF', color: '#6366F1', fontWeight: 600, borderRadius: '6px' }} />
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Typography sx={{ fontWeight: 700, fontSize: '13px', color: '#1E293B' }}>
+                            {rule.match_count || 0}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                            {isEditing ? (
+                              <>
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleRuleOp('PUT', { ...rule, ...editRuleData }); }} sx={{ color: '#10B981' }}><CheckIcon fontSize="small" /></IconButton>
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditingRuleId(null); }} sx={{ color: '#EF4444' }}><CloseIcon fontSize="small" /></IconButton>
+                              </>
+                            ) : (
+                              <IconButton 
+                                size="small" 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  handleRuleOp('DELETE', { id: rule.id }); 
+                                }} 
+                                sx={{ color: '#94A3B8', '&:hover': { color: '#EF4444', bgcolor: '#FEF2F2' } }}
+                              >
+                                <DeleteIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Box>
         )}
       </Box>

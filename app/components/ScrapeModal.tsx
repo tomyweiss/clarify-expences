@@ -326,7 +326,6 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           InputLabelProps={{ shrink: true }}
           inputProps={{ max: todayStr }}
           size="small"
-          autoFocus
         />
 
         <Box sx={{ 

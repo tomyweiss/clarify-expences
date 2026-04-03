@@ -12,7 +12,7 @@ export const useCategories = () => {
         const response = await fetch('/api/get_all_categories');
         if (response.ok) {
           const data = await response.json();
-          setCategories(data);
+          setCategories(data.map((c: { name: string }) => c.name));
         } else {
           throw new Error('Failed to fetch categories');
         }
