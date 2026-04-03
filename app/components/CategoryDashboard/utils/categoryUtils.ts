@@ -248,7 +248,8 @@ export const fetchCategories = async (): Promise<string[]> => {
     if (!response.ok) {
       throw new Error('Failed to fetch categories');
     }
-    return await response.json();
+    const data = await response.json();
+    return data.map((c: { name: string }) => c.name);
   } catch (error) {
     console.error('Error fetching categories:', error);
     return Object.keys(defaultIconMap); // Return default categories as fallback

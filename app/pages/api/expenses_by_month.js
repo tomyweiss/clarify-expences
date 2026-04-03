@@ -15,8 +15,13 @@ const handler = createApiHandler({
     if (groupByYearBool) {
       return {
         sql: `
-          SELECT
-            SUM(price) AS amount,
+          SELECT 
+            (SUM(price) + COALESCE((
+              SELECT SUM(rt.amount * 12)
+              FROM recurrent_transactions rt
+              WHERE rt.start_date <= (DATE_TRUNC('year', date) + INTERVAL '1 year' - INTERVAL '1 day')
+              AND (rt.end_date IS NULL OR rt.end_date >= DATE_TRUNC('year', date))
+            ), 0)) AS amount,
             TO_CHAR(date, 'YYYY') AS year,
             DATE_TRUNC('year', date) AS year_sort
           FROM transactions
@@ -32,7 +37,12 @@ const handler = createApiHandler({
     return {
       sql: `
         SELECT 
-          SUM(price) AS amount,
+          (SUM(price) + COALESCE((
+            SELECT SUM(rt.amount)
+            FROM recurrent_transactions rt
+            WHERE rt.start_date <= (DATE_TRUNC('month', date) + INTERVAL '1 month' - INTERVAL '1 day')
+            AND (rt.end_date IS NULL OR rt.end_date >= DATE_TRUNC('month', date))
+          ), 0)) AS amount,
           TO_CHAR(date, 'YYYY') AS year,
           TO_CHAR(date, 'MM') AS month,
           TO_CHAR(date, 'MM-YYYY') AS year_month,

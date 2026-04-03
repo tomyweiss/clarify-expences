@@ -9,7 +9,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import StorageIcon from '@mui/icons-material/Storage';
+import SecurityIcon from '@mui/icons-material/Security';
 import { getCurrency, setCurrency } from '../CategoryDashboard/utils/format';
 import { useNotification } from '../NotificationContext';
 import DatabaseIndicator from '../DatabaseIndicator';
@@ -143,7 +143,7 @@ const SettingsPage: React.FC = () => {
       >
         <Tab icon={<SettingsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Preferences" />
         <Tab icon={<HistoryIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Audit Logs" />
-        <Tab icon={<StorageIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Data Management" />
+        <Tab icon={<SecurityIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Privacy" />
       </Tabs>
 
       <Box sx={{ maxWidth: '800px' }}>
@@ -183,33 +183,33 @@ const SettingsPage: React.FC = () => {
               <Box sx={{ width: '100%' }}>
                 {/* Header */}
                 <Box sx={{ 
-                  display: 'flex', px: 3, py: 1.5, borderBottom: '1px solid #F1F5F9',
+                  display: 'grid', gridTemplateColumns: '160px 120px 100px 1fr', px: 3, py: 1.5, borderBottom: '1px solid #F1F5F9',
                   color: '#94A3B8', fontSize: '11px', fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '0.05em'
                 }}>
-                  <Box sx={{ flex: 1 }}>Time</Box>
-                  <Box sx={{ flex: 1 }}>Vendor</Box>
-                  <Box sx={{ flex: 1 }}>Status</Box>
-                  <Box sx={{ flex: 1.5 }}>Details</Box>
+                  <Box>Time</Box>
+                  <Box>Vendor</Box>
+                  <Box>Status</Box>
+                  <Box>Details</Box>
                 </Box>
                 {/* Rows */}
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                   {events.map((ev) => (
                     <Box key={ev.id} sx={{ 
-                      display: 'flex', alignItems: 'center', px: 3, py: 1.8, borderBottom: '1px solid #F8FAFC',
+                      display: 'grid', gridTemplateColumns: '160px 120px 100px 1fr', alignItems: 'center', px: 3, py: 1.8, borderBottom: '1px solid #F8FAFC',
                       transition: '0.2s', '&:hover': { background: '#F8FAFC' }
                     }}>
-                      <Box sx={{ flex: 1 }}>
+                      <Box>
                         <Typography sx={{ fontSize: '13px', color: '#64748B' }}>
                           {new Date(ev.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                         </Typography>
                       </Box>
-                      <Box sx={{ flex: 1 }}>
+                      <Box>
                         <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', textTransform: 'capitalize' }}>
                           {ev.vendor}
                         </Typography>
                       </Box>
-                      <Box sx={{ flex: 1 }}>
+                      <Box>
                         <Chip label={ev.status} size="small" sx={{ 
                           height: '22px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
                           backgroundColor: ev.status === 'success' ? '#ECFDF5' : ev.status === 'failed' ? '#FEF2F2' : '#F1F5F9',
@@ -217,7 +217,7 @@ const SettingsPage: React.FC = () => {
                           border: '1px solid', borderColor: ev.status === 'success' ? '#A7F3D0' : ev.status === 'failed' ? '#FECACA' : '#E2E8F0'
                         }} />
                       </Box>
-                      <Box sx={{ flex: 1.5 }}>
+                      <Box>
                         <Typography sx={{ fontSize: '13px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {ev.message || 'Synced'}
                         </Typography>
@@ -230,7 +230,7 @@ const SettingsPage: React.FC = () => {
           </Box>
         )}
 
-        {/* Data Management */}
+        {/* Privacy */}
         {tabValue === 2 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Box sx={{ p: 3, borderRadius: '12px', background: '#fff', border: '1px solid #E5E7EB' }}>

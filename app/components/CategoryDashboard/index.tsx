@@ -4,12 +4,31 @@ import Tooltip from '@mui/material/Tooltip';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import TableChartIcon from '@mui/icons-material/TableChart';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import PaidIcon from '@mui/icons-material/Paid';
+import SavingsIcon from '@mui/icons-material/Savings';
+import SettingsIcon from '@mui/icons-material/Settings';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import CloseIcon from '@mui/icons-material/Close';
+import { 
+  Typography, 
+  Box, 
+  Button, 
+  Fade, 
+  Container, 
+  Grid, 
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent
+} from '@mui/material';
 import { ResponseData, Expense, ModalData } from './types';
 import { useCategoryIcons, useCategoryColors } from './utils/categoryUtils';
 import Card from './components/Card';
 import ExpensesModal from './components/ExpensesModal';
 import TransactionsTable from './components/TransactionsTable';
+import RecurrentDashboard from '../RecurrentDashboard';
 
 // Common styles
 const BUTTON_STYLE = {
@@ -76,6 +95,7 @@ const CategoryDashboard: React.FC = () => {
   const [showTransactionsTable, setShowTransactionsTable] = React.useState(false);
   const [transactions, setTransactions] = React.useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = React.useState(false);
+  const [recurrentModalOpen, setRecurrentModalOpen] = React.useState(false);
   const categoryIcons = useCategoryIcons();
   const categoryColors = useCategoryColors();
   const [allAvailableDates, setAllAvailableDates] = React.useState<string[]>([]);
@@ -91,11 +111,8 @@ const CategoryDashboard: React.FC = () => {
   }, [selectedYear, selectedMonth]);
 
   const handleDataRefresh = React.useCallback(() => {
-    if (currentYearRef.current && currentMonthRef.current) {
-      setTimeout(() => {
-        fetchData(`${currentYearRef.current}-${currentMonthRef.current}`);
-      }, 0);
-    }
+    // Re-fetch all available months and refresh the current view
+    getAvailableMonths();
   }, []);
 
   React.useEffect(() => {
@@ -205,15 +222,6 @@ const CategoryDashboard: React.FC = () => {
     fetchData(`${selectedYear}-${newMonth}`);
   };
 
-  const handleRefreshClick = () => {
-    if (selectedYear && selectedMonth) {
-      const currentMonth = `${selectedYear}-${selectedMonth}`;
-      fetchData(currentMonth);
-      if (showTransactionsTable) {
-        fetchTransactions();
-      }
-    }
-  };
 
   const fetchData = async (month: string) => {
     try {
@@ -261,14 +269,16 @@ const CategoryDashboard: React.FC = () => {
     }
   };
   
-  const categories = sumPerCategory.map((item) => {
-    return {
-      name: item.name,
-      value: item.value,
-      color: categoryColors[item.name] || '#94a3b8',
-      icon: categoryIcons[item.name] || MonetizationOnIcon
-    };
-  });
+  const categories = sumPerCategory
+    .map((item) => {
+      return {
+        name: item.name,
+        value: item.value,
+        color: categoryColors[item.name] || '#94a3b8',
+        icon: categoryIcons[item.name] || MonetizationOnIcon
+      };
+    })
+    .sort((a, b) => b.value - a.value);
 
   const handleBankTransactionsClick = async () => {
     setLoadingBankTransactions(true);
@@ -462,245 +472,366 @@ const CategoryDashboard: React.FC = () => {
         zIndex: 1
       }}>
 
-      {/* Hero Section */}
-      <div style={{
-        marginBottom: '32px',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '24px',
-          paddingBottom: '24px',
-          borderBottom: '1px solid rgba(229, 231, 235, 0.5)'
-        }}>
-          <div>
-            <h1 style={{
-              fontSize: '24px',
-              fontWeight: 700,
-              margin: 0,
-              color: '#111827'
-            }}>Finance</h1>
-          </div>
-          <div style={{
+      {allAvailableDates.length === 0 ? (
+        <Fade in={true} timeout={800}>
+          <Box sx={{ 
+            mt: 8,
+            p: 8, 
+            borderRadius: '32px', 
+            bgcolor: '#FFF', 
+            border: '1px solid #E2E8F0',
             display: 'flex',
-            gap: '16px',
-            alignItems: 'center'
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 3,
+            textAlign: 'center',
+            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)',
+            minHeight: '450px'
           }}>
-            <Tooltip title="Refresh Dashboard" arrow>
-              <IconButton
-                onClick={handleRefreshClick}
-                style={BUTTON_STYLE}
-                onMouseEnter={(e) => Object.assign(e.currentTarget.style, HOVER_BUTTON_STYLE)}
-                onMouseLeave={(e) => Object.assign(e.currentTarget.style, BUTTON_STYLE)}
+            <Box sx={{ 
+              width: 100, 
+              height: 100, 
+              borderRadius: '28px', 
+              bgcolor: 'rgba(99, 102, 241, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#6366F1',
+              mb: 1
+            }}>
+              <MonetizationOnIcon sx={{ fontSize: '50px' }} />
+            </Box>
+            <Box>
+              <Typography variant="h4" sx={{ 
+                fontWeight: 800, 
+                fontFamily: "'Outfit', sans-serif", 
+                color: '#1E293B',
+                mb: 1,
+                letterSpacing: '-0.02em'
+              }}>
+                Welcome to Finance
+              </Typography>
+              <Typography sx={{ color: '#64748B', maxWidth: '450px', mx: 'auto', lineHeight: 1.6, fontSize: '16px' }}>
+                Go to the <strong>Management</strong> tab to connect your bank accounts or upload transactions and start tracking your income and expenses.
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+              <Button
+                variant="contained"
+                onClick={() => window.dispatchEvent(new CustomEvent('openManagement'))}
+                startIcon={<SettingsIcon />}
+                sx={{ 
+                  bgcolor: '#6366F1', 
+                  '&:hover': { bgcolor: '#4F46E5' },
+                  borderRadius: '12px',
+                  px: 4,
+                  py: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '16px'
+                }}
               >
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={showTransactionsTable ? "Hide Transactions Table" : "Show Transactions Table"} arrow>
-              <IconButton
-                onClick={handleTransactionsTableClick}
-                style={{
-                  ...BUTTON_STYLE,
-                  ...(showTransactionsTable ? {
-                    background: '#6366F1',
-                    borderColor: '#6366F1',
-                    color: '#FFFFFF'
-                  } : {})
-                }}
-                onMouseEnter={(e) => {
-                  if (!showTransactionsTable) Object.assign(e.currentTarget.style, HOVER_BUTTON_STYLE)
-                }}
-                onMouseLeave={(e) => {
-                  if (!showTransactionsTable) Object.assign(e.currentTarget.style, BUTTON_STYLE)
-                }}
-              >
-                <TableChartIcon />
-              </IconButton>
-            </Tooltip>
-            <select 
-              value={selectedYear}
-              onChange={handleYearChange}
-              style={{ ...SELECT_STYLE, minWidth: '120px' }}
-              onMouseEnter={(e) => Object.assign(e.currentTarget.style, { background: '#F3F4F6' })}
-              onMouseLeave={(e) => Object.assign(e.currentTarget.style, { background: '#FFFFFF' })}
-            >
-              {uniqueYears.map((year) => (
-                <option key={year} value={year} style={{ background: '#ffffff', color: '#1e293b' }}>
-                  {year}
-                </option>
-              ))}
-            </select>
-            <select 
-              value={selectedMonth}
-              onChange={handleMonthChange}
-              style={{ ...SELECT_STYLE, minWidth: '160px' }}
-              onMouseEnter={(e) => Object.assign(e.currentTarget.style, { background: '#F3F4F6' })}
-              onMouseLeave={(e) => Object.assign(e.currentTarget.style, { background: '#FFFFFF' })}
-            >
-              {uniqueMonths.map((month) => (
-                <option key={month} value={month} style={{ background: '#ffffff', color: '#1e293b' }}>
-                  {new Date(`2024-${month}-01`).toLocaleDateString('default', { month: 'long' })}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Cards Section */}
-      <div style={{ 
-        display: 'flex',
-        gap: '24px',
-        marginTop: '32px',
-        marginBottom: '32px'
-      }}>
-        <div className="elegant-card-entrance" style={{ flex: 1, animationDelay: '0.1s' }}>
-          <Card
-            title="Overview & Balance" 
-            value={bankTransactions.income}
-            color="#4ADE80"
-            icon={MonetizationOnIcon}
-            onClick={handleBankTransactionsClick}
-            isLoading={loadingBankTransactions}
-            size="medium"
-            secondaryValue={bankTransactions.expenses}
-            secondaryColor="#F87171"
-            secondaryLabel="Expenses"
-            layout="split"
-          />
-        </div>
-        <div className="elegant-card-entrance" style={{ flex: 1, animationDelay: '0.2s' }}>
-          <Card 
-            title="Total Expenses" 
-            value={creditCardTransactions + (bankTransactions.expenses || 0)} 
-            color="#3B82F6"
-            icon={CreditCardIcon}
-            onClick={handleTotalCreditCardExpensesClick}
-            isLoading={loadingBankTransactions}
-            size="medium"
-            secondaryValue={creditCardTransactions}
-            secondaryLabel="Card"
-            secondaryColor="#6366F1"
-            layout="split"
-          />
-        </div>
-      </div>
-
-      {showTransactionsTable ? (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '12px',
-          padding: '24px',
-          border: '1px solid #E5E7EB',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <TransactionsTable 
-            transactions={transactions} 
-            isLoading={loadingTransactions}
-            onDelete={handleDeleteTransaction}
-            onUpdate={handleUpdateTransaction}
-          />
-        </div>
+                Go to Management
+              </Button>
+            </Box>
+          </Box>
+        </Fade>
       ) : (
         <>
+          {/* Hero Section */}
           <div style={{
-            marginBottom: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            marginTop: '16px'
+            marginBottom: '32px',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            <div style={{ 
-              height: '1px', 
-              flex: 1, 
-              background: 'linear-gradient(to right, transparent, rgba(229, 231, 235, 0.8))',
-            }} />
-            <h2 style={{
-              fontSize: '11px',
-              fontWeight: 700,
-              margin: 0,
-              color: '#94A3B8',
-              letterSpacing: '1.5px',
-              textTransform: 'uppercase',
-              padding: '0 8px'
-            }}>Expense Categories</h2>
-            <div style={{ 
-              height: '1px', 
-              flex: 1, 
-              background: 'linear-gradient(to left, transparent, rgba(229, 231, 235, 0.8))',
-            }} />
-          </div>
-          <div style={{ 
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '24px',
-            width: '100%',
-            boxSizing: 'border-box'
-          }}>
-          {categories.length > 0 ? (
-            categories.map((category, index) => (
-              <div 
-                key={"category-container-" + index} 
-                className="elegant-card-entrance" 
-                style={{ animationDelay: `${0.3 + (index * 0.05)}s` }}
-              >
-                <Card
-                  key={"category-" + index}
-                  title={category.name}
-                  value={category.value}
-                  color={category.color}
-                  icon={category.icon}
-                  onClick={() => handleCategoryClick(category.name)}
-                  isLoading={loadingCategory === category.name}
-                  size="medium"
-                />
-              </div>
-            ))
-          ) : (
             <div style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '64px',
+              position: 'relative',
+              zIndex: 1,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '24px',
+              paddingBottom: '24px',
+              borderBottom: '1px solid rgba(229, 231, 235, 0.5)'
+            }}>
+              <div>
+                <h1 style={{
+                  fontSize: '24px',
+                  fontWeight: 700,
+                  margin: 0,
+                  color: '#111827'
+                }}>Finance</h1>
+              </div>
+              <div style={{
+                display: 'flex',
+                gap: '16px',
+                alignItems: 'center'
+              }}>
+                <Tooltip title={showTransactionsTable ? "Hide Transactions Table" : "Show Transactions Table"} arrow>
+                  <IconButton
+                    onClick={handleTransactionsTableClick}
+                    disableRipple
+                    disableFocusRipple
+                    sx={{
+                      ...BUTTON_STYLE,
+                      bgcolor: showTransactionsTable ? '#6366F1 !important' : '#FFFFFF !important',
+                      borderColor: showTransactionsTable ? '#6366F1' : '#E5E7EB',
+                      color: showTransactionsTable ? '#FFFFFF' : '#4B5563',
+                      '&:hover': {
+                         bgcolor: showTransactionsTable ? '#4F46E5 !important' : '#F3F4F6 !important',
+                         color: showTransactionsTable ? '#FFFFFF' : '#111827'
+                      },
+                      '&:focus, &:focus-visible, &.Mui-focusVisible': {
+                        outline: 'none !important',
+                        bgcolor: showTransactionsTable ? '#6366F1 !important' : '#FFFFFF !important',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                      }
+                    }}
+                  >
+                    <TableChartIcon />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Recurrent Transactions" arrow>
+                  <IconButton
+                    onClick={() => setRecurrentModalOpen(true)}
+                    disableRipple
+                    disableFocusRipple
+                    sx={{ 
+                      ...BUTTON_STYLE,
+                      bgcolor: '#FFFFFF !important',
+                      '&:hover': {
+                        bgcolor: '#F3F4F6 !important',
+                        color: '#111827'
+                      },
+                      '&:focus, &:focus-visible, &.Mui-focusVisible': {
+                        outline: 'none !important',
+                        bgcolor: '#FFFFFF !important'
+                      }
+                    }}
+                  >
+                    <AutorenewIcon />
+                  </IconButton>
+                </Tooltip>
+                <select 
+                  value={selectedYear}
+                  onChange={handleYearChange}
+                  style={{ ...SELECT_STYLE, minWidth: '120px' }}
+                  onMouseEnter={(e) => Object.assign(e.currentTarget.style, { background: '#F3F4F6' })}
+                  onMouseLeave={(e) => Object.assign(e.currentTarget.style, { background: '#FFFFFF' })}
+                >
+                  {uniqueYears.map((year) => (
+                    <option key={year} value={year} style={{ background: '#ffffff', color: '#1e293b' }}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+                <select 
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
+                  style={{ ...SELECT_STYLE, minWidth: '160px' }}
+                  onMouseEnter={(e) => Object.assign(e.currentTarget.style, { background: '#F3F4F6' })}
+                  onMouseLeave={(e) => Object.assign(e.currentTarget.style, { background: '#FFFFFF' })}
+                >
+                  {uniqueMonths.map((month) => (
+                    <option key={month} value={month} style={{ background: '#ffffff', color: '#1e293b' }}>
+                      {new Date(`2024-${month}-01`).toLocaleDateString('default', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Cards Section */}
+          <div style={{ 
+            display: 'flex',
+            gap: '24px',
+            marginTop: '32px',
+            marginBottom: '32px'
+          }}>
+            <div className="elegant-card-entrance" style={{ flex: 1, animationDelay: '0.1s' }}>
+              <Card
+                title="Overview & Balance" 
+                value={bankTransactions.income}
+                color="#4ADE80"
+                icon={MonetizationOnIcon}
+                onClick={handleBankTransactionsClick}
+                isLoading={loadingBankTransactions}
+                size="medium"
+                secondaryValue={bankTransactions.expenses}
+                secondaryColor="#F87171"
+                secondaryLabel="Expenses"
+                layout="split"
+              />
+            </div>
+            <div className="elegant-card-entrance" style={{ flex: 1, animationDelay: '0.2s' }}>
+              <Card 
+                title="Total Expenses" 
+                value={creditCardTransactions + (bankTransactions.expenses || 0)} 
+                color="#3B82F6"
+                icon={CreditCardIcon}
+                onClick={handleTotalCreditCardExpensesClick}
+                isLoading={loadingBankTransactions}
+                size="medium"
+                secondaryValue={creditCardTransactions}
+                secondaryLabel="Card"
+                secondaryColor="#6366F1"
+                layout="split"
+              />
+            </div>
+          </div>
+
+          {showTransactionsTable ? (
+            <div style={{
               background: '#FFFFFF',
               borderRadius: '12px',
+              padding: '24px',
               border: '1px solid #E5E7EB',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
             }}>
-              <div style={{
-                fontSize: '48px',
-                marginBottom: '16px',
-                opacity: 0.6
-              }}>📊</div>
-              <div style={{
-                color: '#475569',
-                fontSize: '18px',
-                fontWeight: 600
-              }}>No transactions found for {new Date(`2024-${selectedMonth}-01`).toLocaleDateString('default', { month: 'long' })} {selectedYear}</div>
+              <TransactionsTable 
+                transactions={transactions} 
+                isLoading={loadingTransactions}
+                onDelete={handleDeleteTransaction}
+                onUpdate={handleUpdateTransaction}
+              />
             </div>
+          ) : (
+            <>
+              <div style={{
+                marginBottom: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                marginTop: '16px'
+              }}>
+                <div style={{ 
+                  height: '1px', 
+                  flex: 1, 
+                  background: 'linear-gradient(to right, transparent, rgba(229, 231, 235, 0.8))',
+                }} />
+                <h2 style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  margin: 0,
+                  color: '#94A3B8',
+                  letterSpacing: '1.5px',
+                  textTransform: 'uppercase',
+                  padding: '0 8px'
+                }}>Expense Categories</h2>
+                <div style={{ 
+                  height: '1px', 
+                  flex: 1, 
+                  background: 'linear-gradient(to left, transparent, rgba(229, 231, 235, 0.8))',
+                }} />
+              </div>
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '24px',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
+                {categories.length > 0 ? (
+                  categories.map((category, index) => (
+                    <div 
+                      key={"category-container-" + index} 
+                      className="elegant-card-entrance" 
+                      style={{ animationDelay: `${0.3 + (index * 0.05)}s` }}
+                    >
+                      <Card
+                        key={"category-" + index}
+                        title={category.name}
+                        value={category.value}
+                        color={category.color}
+                        icon={category.icon}
+                        onClick={() => handleCategoryClick(category.name)}
+                        isLoading={loadingCategory === category.name}
+                        size="medium"
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <Fade in={true} timeout={500}>
+                    <Box sx={{
+                      gridColumn: '1 / -1',
+                      textAlign: 'center',
+                      p: 8,
+                      bgcolor: '#FFFFFF',
+                      borderRadius: '24px',
+                      border: '1px solid #E2E8F0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                    }}>
+                      <Box sx={{ 
+                        p: 2, 
+                        borderRadius: '16px', 
+                        bgcolor: '#F8FAFC', 
+                        color: '#CBD5E1',
+                        mb: 1
+                      }}>
+                        <TableChartIcon sx={{ fontSize: '40px' }} />
+                      </Box>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', mb: 0.5 }}>
+                          No transactions found
+                        </Typography>
+                        <Typography sx={{ color: '#64748B', maxWidth: '300px', fontSize: '14px' }}>
+                          There are no recorded transactions for {new Date(`${selectedYear}-${selectedMonth}-01`).toLocaleDateString('default', { month: 'long', year: 'numeric' })}.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Fade>
+                )}
+              </div>
+            </>
           )}
-        </div>
         </>
       )}
-    </div>
+      </div>
 
       {modalData && (
         <ExpensesModal
           open={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           data={modalData}
-          color={categoryColors[modalData?.type] || '#94a3b8'}
+          color={categoryColors[modalData?.type || ''] || '#94a3b8'}
           setModalData={setModalData}
           currentMonth={`${selectedYear}-${selectedMonth}`}
         />
       )}
+
+      <Dialog 
+        open={recurrentModalOpen} 
+        onClose={() => setRecurrentModalOpen(false)}
+        disableRestoreFocus
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: '24px', p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <IconButton
+            aria-label="close"
+            onClick={() => setRecurrentModalOpen(false)}
+            sx={{ color: (theme) => theme.palette.grey[500] }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: -4 }}>
+          <RecurrentDashboard />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default CategoryDashboard; 
+export default CategoryDashboard;

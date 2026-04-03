@@ -31,9 +31,16 @@ const handler = createAuthenticatedApiHandler({
     if (req.method === 'GET') {
       return {
         sql: `
-          SELECT id, name_pattern, target_category, is_active, created_at, updated_at
-          FROM categorization_rules
-          ORDER BY created_at DESC
+          SELECT 
+            cr.id, 
+            cr.name_pattern, 
+            cr.target_category, 
+            cr.is_active, 
+            cr.created_at, 
+            cr.updated_at,
+            (SELECT COUNT(*) FROM transactions t WHERE t.name ILIKE '%' || cr.name_pattern || '%') as match_count
+          FROM categorization_rules cr
+          ORDER BY cr.created_at DESC
         `,
         params: []
       };

@@ -12,15 +12,20 @@ const handler = createApiHandler({
     if (all === "true") {
       return {
         sql: `
-          SELECT 
-            name,
-            price,
-            date,
-            category,
-            identifier,
-            vendor
-          FROM transactions 
-          WHERE TO_CHAR(date, 'YYYY-MM') = $1
+          SELECT name, price, date, category, identifier, vendor
+          FROM (
+            SELECT name, price, date, category, identifier, vendor
+            FROM transactions 
+            WHERE TO_CHAR(date, 'YYYY-MM') = $1
+            
+            UNION ALL
+            
+            SELECT name, amount AS price, ($1 || '-01')::DATE AS date, category, 'recurrent-' || id AS identifier, 'recurrent' AS vendor
+            FROM recurrent_transactions
+            WHERE (start_date <= ($1 || '-01')::DATE + INTERVAL '1 month' - INTERVAL '1 day')
+            AND (end_date IS NULL OR end_date >= ($1 || '-01')::DATE)
+            AND EXISTS (SELECT 1 FROM transactions WHERE TO_CHAR(date, 'YYYY-MM') = $1)
+          ) combined
           ORDER BY date DESC
         `,
         params: [month]
@@ -29,16 +34,22 @@ const handler = createApiHandler({
     
     return {
       sql: `
-        SELECT 
-          name,
-          price,
-          date,
-          category,
-          identifier,
-          vendor
-        FROM transactions 
-        WHERE TO_CHAR(date, 'YYYY-MM') = $1 
-        AND category = $2
+        SELECT name, price, date, category, identifier, vendor
+        FROM (
+          SELECT name, price, date, category, identifier, vendor
+          FROM transactions 
+          WHERE TO_CHAR(date, 'YYYY-MM') = $1 
+          AND category = $2
+          
+          UNION ALL
+          
+          SELECT name, amount AS price, ($1 || '-01')::DATE AS date, category, 'recurrent-' || id AS identifier, 'recurrent' AS vendor
+          FROM recurrent_transactions
+          WHERE category = $2
+          AND (start_date <= ($1 || '-01')::DATE + INTERVAL '1 month' - INTERVAL '1 day')
+          AND (end_date IS NULL OR end_date >= ($1 || '-01')::DATE)
+          AND EXISTS (SELECT 1 FROM transactions WHERE TO_CHAR(date, 'YYYY-MM') = $1 AND category = $2)
+        ) combined
         ORDER BY date DESC
       `,
       params: [month, category]
