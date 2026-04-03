@@ -1,122 +1,144 @@
 import * as React from "react";
-import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
-import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import Menu from "@mui/material/Menu";
-import Container from "@mui/material/Container";
-import Button from "@mui/material/Button";
 import { styled } from "@mui/material/styles";
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import PersonIcon from '@mui/icons-material/Person';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import SettingsIcon from '@mui/icons-material/Settings';
-import EditIcon from '@mui/icons-material/Edit';
-import HistoryIcon from '@mui/icons-material/History';
+import StorageIcon from '@mui/icons-material/Storage';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ScrapeModal from './ScrapeModal';
-import ManualModal from './ManualModal';
-import DatabaseIndicator from './DatabaseIndicator';
-import AccountsModal from './AccountsModal';
-import CategoryManagementModal from './CategoryDashboard/components/CategoryManagementModal';
-import ScrapeAuditModal from './ScrapeAuditModal';
-import SettingsModal from './SettingsModal';
 import { useNotification } from './NotificationContext';
 import { useAuth } from './AuthContext';
 
-interface StringDictionary {
-  [key: string]: string;
+import ManagementModal, { ManagementTab } from './ManagementModal';
+
+import SecurityIcon from '@mui/icons-material/Security';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+
+const SIDEBAR_WIDTH = 220;
+
+const SidebarContainer = styled(Box)({
+  position: 'fixed',
+  left: 0,
+  top: 0,
+  bottom: 0,
+  width: `${SIDEBAR_WIDTH}px`,
+  backgroundColor: '#FFFFFF',
+  borderRight: '1px solid #E5E7EB',
+  display: 'flex',
+  flexDirection: 'column',
+  zIndex: 1200,
+  overflow: 'hidden',
+});
+
+const LogoSection = styled(Box)({
+  padding: '24px 20px 20px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  cursor: 'pointer',
+  transition: 'opacity 0.2s',
+  '&:hover': { opacity: 0.85 },
+});
+
+const NavSection = styled(Box)({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '8px 12px',
+  gap: '2px',
+});
+
+const NavItem = styled(Box)<{ active?: boolean }>(({ active }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '10px 12px',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  color: active ? '#6366F1' : '#4B5563',
+  backgroundColor: active ? '#EEF2FF' : 'transparent',
+  fontFamily: "'Inter', sans-serif",
+  fontSize: '14px',
+  fontWeight: active ? 600 : 500,
+  transition: 'all 0.15s ease',
+  userSelect: 'none' as const,
+  '&:hover': {
+    backgroundColor: active ? '#E0E7FF' : '#F3F4F6',
+    color: active ? '#4F46E5' : '#111827',
+  },
+  '& .MuiSvgIcon-root': {
+    fontSize: '20px',
+    opacity: active ? 1 : 0.75,
+  },
+}));
+
+const BottomSection = styled(Box)({
+  padding: '12px',
+  borderTop: '1px solid #E5E7EB',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2px',
+});
+
+const MainContent = styled(Box)({
+  marginLeft: `${SIDEBAR_WIDTH}px`,
+  minHeight: '100vh',
+  backgroundColor: '#F5F5F5',
+});
+
+const ComingSoonPlaceholder = ({ title, icon }: { title: string, icon: React.ReactNode }) => (
+  <Box sx={{ 
+    height: '100vh', 
+    display: 'flex', 
+    flexDirection: 'column', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    gap: 2,
+    color: '#94A3B8'
+  }}>
+    <Box sx={{ 
+      width: 64, 
+      height: 64, 
+      borderRadius: '20px', 
+      backgroundColor: '#FFF', 
+      border: '1px solid #E2E8F0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      mb: 1
+    }}>
+      {React.cloneElement(icon as React.ReactElement<any>, { sx: { fontSize: 32, color: '#6366F1' } })}
+    </Box>
+    <Typography sx={{ 
+      fontFamily: "'Outfit', sans-serif", 
+      fontSize: '24px', 
+      fontWeight: 700, 
+      color: '#1E293B' 
+    }}>
+      {title}
+    </Typography>
+    <Typography sx={{ 
+      fontFamily: "'Inter', sans-serif", 
+      fontSize: '14px', 
+      color: '#64748B' 
+    }}>
+      This feature is coming soon. Stay tuned!
+    </Typography>
+  </Box>
+);
+
+interface AppShellProps {
+  children: React.ReactNode; 
 }
 
-const pages: StringDictionary = {};
-
-const StyledAppBar = styled(AppBar)({
-  background: '#FFFFFF',
-  borderBottom: '1px solid #E5E7EB',
-  boxShadow: 'none',
-});
-
-const Logo = styled(Typography)({
-  fontFamily: "'Inter', sans-serif",
-  fontWeight: 700,
-  fontSize: '1.25rem',
-  color: '#111827',
-  textDecoration: "none",
-  cursor: "pointer",
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    opacity: 0.8,
-  },
-});
-
-const NavButton = styled(Button)({
-  color: '#4B5563',
-  textTransform: 'none',
-  fontSize: '0.875rem',
-  fontWeight: 500,
-  padding: '6px 12px',
-  borderRadius: '8px',
-  margin: '0 4px',
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    backgroundColor: '#F3F4F6',
-    color: '#111827',
-  },
-  '&:active': {
-    transform: 'scale(0.98)',
-  },
-  '&:focus': {
-    outline: 'none',
-  },
-  '&:focus-visible': {
-    outline: 'none',
-  },
-  '& .MuiTouchRipple-root': {
-    display: 'none',
-  }
-});
-
-const SignOutButton = styled(Button)({
-  color: '#6B7280',
-  textTransform: 'none',
-  fontSize: '0.875rem',
-  fontWeight: 500,
-  padding: '6px 12px',
-  borderRadius: '8px',
-  marginLeft: '8px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    backgroundColor: '#FEE2E2',
-    color: '#DC2626',
-  },
-  '&:focus': {
-    outline: 'none',
-  },
-  '&:focus-visible': {
-    outline: 'none',
-  },
-  '& .MuiTouchRipple-root': {
-    display: 'none',
-  }
-});
-
-const redirectTo = (page: string) => {
-  return () => (window.location.href = page);
-};
-
-function ResponsiveAppBar() {
-  const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
+function AppShell({ children }: AppShellProps) {
+  const [activeMainView, setActiveMainView] = React.useState<'finance' | 'insurance' | 'savings'>('finance');
+  const [managementModalOpen, setManagementModalOpen] = React.useState(false);
+  const [managementTab, setManagementTab] = React.useState<ManagementTab>('accounts');
   const [isScrapeModalOpen, setIsScrapeModalOpen] = React.useState(false);
-  const [isManualModalOpen, setIsManualModalOpen] = React.useState(false);
-  const [isAccountsModalOpen, setIsAccountsModalOpen] = React.useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
-  const [isCategoryManagementOpen, setIsCategoryManagementOpen] = React.useState(false);
-  const [isAuditOpen, setIsAuditOpen] = React.useState(false);
   const { showNotification } = useNotification();
   const { logout } = useAuth();
 
@@ -129,163 +151,97 @@ function ResponsiveAppBar() {
     }
   };
 
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
+  const handleOpenManagement = (tab: ManagementTab) => {
+    setManagementTab(tab);
+    setManagementModalOpen(true);
   };
 
-  const handleAddManualTransaction = async (transactionData: {
-    name: string;
-    amount: number;
-    date: Date;
-    type: 'income' | 'expense';
-    category?: string;
-  }) => {
+  const handleManualSave = async (data: any) => {
     try {
-      const formattedDate = transactionData.date.toISOString().split('T')[0];
-      
       const response = await fetch("/api/manual_transaction", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: transactionData.name,
-          amount: transactionData.amount,
-          date: formattedDate,
-          type: transactionData.type,
-          category: transactionData.category
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, date: data.date.toISOString().split('T')[0] }),
       });
-
       if (response.ok) {
-        setIsManualModalOpen(false);
-        // Dispatch a custom event to trigger data refresh
         window.dispatchEvent(new CustomEvent('dataRefresh'));
-      } else {
-        console.error("Failed to add manual transaction");
       }
     } catch (error) {
       console.error("Error adding manual transaction:", error);
     }
   };
 
-  const handleScrapeSuccess = () => {
-    showNotification('Scraping process completed successfully!', 'success');
-    // Dispatch a custom event to trigger data refresh
-    window.dispatchEvent(new CustomEvent('dataRefresh'));
-  };
-
   return (
     <>
-      <StyledAppBar position="fixed">
-        <Container maxWidth={false}>
-          <Toolbar disableGutters variant="dense" sx={{ minHeight: '48px' }}>
-            <Logo
-              variant="h4"
-              noWrap
-              onClick={redirectTo("/")}
-              sx={{
-                mr: 2,
-                display: { xs: "none", md: "flex" },
-              }}
-            >
-              <AccountBalanceWalletIcon sx={{ fontSize: '28px', color: '#6366F1' }} />
-              Clarify
-            </Logo>
+      <SidebarContainer>
+        <LogoSection onClick={() => { setActiveMainView('finance'); setManagementModalOpen(false); }}>
+          <AccountBalanceWalletIcon sx={{ fontSize: '24px', color: '#6366F1' }} />
+          <Typography sx={{
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 700,
+            fontSize: '1.1rem',
+            color: '#111827',
+            letterSpacing: '-0.01em',
+          }}>
+            Clarify
+          </Typography>
+        </LogoSection>
 
-            <Box sx={{ 
-              flexGrow: 1, 
-              display: { xs: "none", md: "flex" },
-              justifyContent: 'center',
-              gap: '8px'
-            }}>
-              {Object.keys(pages).map((page: string) => (
-                <NavButton
-                  key={page}
-                  onClick={redirectTo(pages[page])}
-                >
-                  {page}
-                </NavButton>
-              ))}
-            </Box>
-            <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <NavButton
-                onClick={() => setIsAuditOpen(true)}
-                startIcon={<HistoryIcon />}
-              >
-                Audit
-              </NavButton>
-              <NavButton
-                onClick={() => setIsManualModalOpen(true)}
-                startIcon={<EditIcon />}
-              >
-                Manual
-              </NavButton>
-              <NavButton
-                onClick={() => setIsCategoryManagementOpen(true)}
-                startIcon={<EditIcon />}
-              >
-                Categories
-              </NavButton>
-              <NavButton
-                onClick={() => setIsAccountsModalOpen(true)}
-                startIcon={<PersonIcon />}
-              >
-                Accounts
-              </NavButton>
-              <SignOutButton
-                onClick={handleLogout}
-                startIcon={<LogoutIcon />}
-              >
-                Logout
-              </SignOutButton>
-              <Menu
-                sx={{ mt: "45px" }}
-                id="menu-appbar"
-                anchorEl={anchorElUser}
-                anchorOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                open={Boolean(anchorElUser)}
-                onClose={handleCloseUserMenu}
-              />
-              <DatabaseIndicator />
-            </Box>
-          </Toolbar>
-        </Container>
-      </StyledAppBar>
-      <ScrapeModal
-        isOpen={isScrapeModalOpen}
-        onClose={() => setIsScrapeModalOpen(false)}
-        onSuccess={handleScrapeSuccess}
+        <NavSection>
+          <NavItem active={activeMainView === 'finance' && !managementModalOpen} onClick={() => { setActiveMainView('finance'); setManagementModalOpen(false); }}>
+            <DashboardIcon />
+            Finance
+          </NavItem>
+
+          <NavItem active={activeMainView === 'insurance' && !managementModalOpen} onClick={() => { setActiveMainView('insurance'); setManagementModalOpen(false); }}>
+            <SecurityIcon />
+            Insurance
+          </NavItem>
+
+          <NavItem active={activeMainView === 'savings' && !managementModalOpen} onClick={() => { setActiveMainView('savings'); setManagementModalOpen(false); }}>
+            <TrendingUpIcon />
+            Savings
+          </NavItem>
+          
+          <Box sx={{ height: '1px', bgcolor: '#E5E7EB', my: 1, mx: 1.5, opacity: 0.6 }} />
+
+          <NavItem active={managementModalOpen} onClick={() => handleOpenManagement('accounts')}>
+            <SettingsIcon />
+            Management
+          </NavItem>
+        </NavSection>
+
+        <Box sx={{ flex: 1 }} />
+
+        <BottomSection>
+          <NavItem onClick={handleLogout}>
+            <LogoutIcon />
+            Logout
+          </NavItem>
+        </BottomSection>
+      </SidebarContainer>
+
+      <MainContent>
+        {activeMainView === 'finance' ? children : (
+          activeMainView === 'insurance' 
+            ? <ComingSoonPlaceholder title="Insurance Portfolio" icon={<SecurityIcon />} />
+            : <ComingSoonPlaceholder title="Savings & Goals" icon={<TrendingUpIcon />} />
+        )}
+      </MainContent>
+
+      <ManagementModal 
+        isOpen={managementModalOpen} 
+        onClose={() => setManagementModalOpen(false)} 
+        activeTab={managementTab}
+        onTabChange={(tab) => setManagementTab(tab)}
+        onManualSave={handleManualSave}
+        onCategoriesUpdated={() => window.dispatchEvent(new CustomEvent('dataRefresh'))}
       />
-      <ManualModal
-        open={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
-        onSave={handleAddManualTransaction}
-      />
-      <AccountsModal
-        isOpen={isAccountsModalOpen}
-        onClose={() => setIsAccountsModalOpen(false)}
-      />
-      <CategoryManagementModal
-        open={isCategoryManagementOpen}
-        onClose={() => setIsCategoryManagementOpen(false)}
-        onCategoriesUpdated={() => {
-          // Dispatch a custom event to trigger data refresh
-          window.dispatchEvent(new CustomEvent('dataRefresh'));
-        }}
-      />
-      <ScrapeAuditModal open={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
-      <SettingsModal open={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
+
+      <ScrapeModal isOpen={isScrapeModalOpen} onClose={() => setIsScrapeModalOpen(false)} />
     </>
   );
 }
 
-export default ResponsiveAppBar;
+export { MainContent, SIDEBAR_WIDTH };
+export default AppShell;

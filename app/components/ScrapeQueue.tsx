@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   Paper, 
@@ -15,6 +15,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import SyncIcon from '@mui/icons-material/Sync';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import { useScrape } from './ScrapeContext';
 
 const QueueContainer = styled(Paper)(({ theme }) => ({
   position: 'fixed',
@@ -54,38 +55,12 @@ const TaskItem = styled(Box)(({ theme }) => ({
 
 export default function ScrapeQueue() {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTasks, setActiveTasks] = useState<any[]>([]);
-  const [completedTasks, setCompletedTasks] = useState<any[]>([]);
+  const { tasks } = useScrape();
   
-  const fetchScrapeEvents = async () => {
-    try {
-      const response = await fetch('/api/scrape_events?limit=30');
-      if (response.ok) {
-        const events = await response.json();
-        const active = events.filter((e: any) => e.status === 'started');
-        // We can show recently completed tasks too, e.g. from the last 2 minutes
-        const recentlyCompleted = events.filter((e: any) => {
-          if (e.status === 'started') return false;
-          const completedAt = new Date(e.created_at).getTime(); // They are ordered desc by started time, but assume recently started
-          const now = new Date().getTime();
-          return now - completedAt < 60 * 1000; // Tasks completed within last 60s
-        });
-        
-        setActiveTasks(active);
-        setCompletedTasks(recentlyCompleted.slice(0, 3)); // keep max 3 recently completed
-      }
-    } catch (e) {
-      console.error('Failed to fetch scrape events queue', e);
-    }
-  };
-
-  useEffect(() => {
-    fetchScrapeEvents();
-    const interval = setInterval(fetchScrapeEvents, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const totalItems = activeTasks.length + completedTasks.length;
+  const activeTasks = tasks.filter((t) => t.status === 'started');
+  const completedTasks = tasks.filter((t) => t.status !== 'started').slice(0, 5); 
+  
+  const totalItems = tasks.length;
 
   if (totalItems === 0) return null;
 
@@ -107,6 +82,12 @@ export default function ScrapeQueue() {
       
       <Collapse in={isOpen}>
         <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
+          {activeTasks.length === 0 && completedTasks.length === 0 && (
+            <TaskItem>
+              <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>No active tasks</Typography>
+            </TaskItem>
+          )}
+
           {activeTasks.map((task) => (
             <TaskItem key={task.id}>
               <CircularProgress size={20} thickness={5} sx={{ color: '#3B82F6' }} />

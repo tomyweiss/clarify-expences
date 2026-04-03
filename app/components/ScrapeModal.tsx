@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
@@ -12,6 +12,7 @@ import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useNotification } from './NotificationContext';
+import { useScrape } from './ScrapeContext';
 import ModalHeader from './ModalHeader';
 import { BEINLEUMI_GROUP_VENDORS, STANDARD_BANK_VENDORS } from '../utils/constants';
 
@@ -46,13 +47,14 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
   const [error, setError] = useState<string | null>(null);
   const [cardSuffixesText, setCardSuffixesText] = useState('');
   const { showNotification } = useNotification();
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const lastKnownEventIdRef = useRef<number | null>(null);
+  const { addTask, updateTask } = useScrape();
+  
   const todayStr = new Date().toISOString().split('T')[0];
   const clampDateString = (value: string) => (value > todayStr ? todayStr : value);
+  
   const defaultConfig: ScraperConfig = {
     options: {
-      companyId: 'isracard',
+      companyId: '',
       startDate: new Date(),
       combineInstallments: false,
       showBrowser: false,
@@ -68,6 +70,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       bankAccountNumber: ''
     }
   };
+  
   const [config, setConfig] = useState<ScraperConfig>(initialConfig || defaultConfig);
 
   useEffect(() => {
@@ -85,75 +88,6 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       setIsLoading(false);
     }
   }, [isOpen, initialConfig]);
-
-  // Clean up polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, []);
-
-  const startPollingForResult = useCallback((vendor: string, nickname: string) => {
-    // Store the latest event ID before starting so we only look for new events
-    fetch('/api/scrape_events?limit=1')
-      .then(res => res.json())
-      .then(events => {
-        if (events.length > 0) {
-          lastKnownEventIdRef.current = events[0].id;
-        }
-      })
-      .catch(() => {});
-
-    // Poll every 5 seconds for the result
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch('/api/scrape_events?limit=5');
-        if (!res.ok) return;
-        const events = await res.json();
-        
-        // Find a new event matching our vendor that was created after we started
-        const matchingEvent = events.find((e: any) => {
-          const isNew = lastKnownEventIdRef.current === null || e.id > lastKnownEventIdRef.current;
-          const matchesVendor = e.vendor === vendor;
-          const isTerminal = e.status === 'success' || e.status === 'failed';
-          return isNew && matchesVendor && isTerminal;
-        });
-
-        if (matchingEvent) {
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-          }
-
-          if (matchingEvent.status === 'success') {
-            showNotification(
-              `✅ Scraping completed for ${nickname || vendor}! Data has been refreshed.`,
-              'success'
-            );
-            onSuccess?.();
-          } else {
-            showNotification(
-              `❌ Scraping failed for ${nickname || vendor}: ${matchingEvent.message || 'Unknown error'}`,
-              'error'
-            );
-          }
-        }
-      } catch (err) {
-        // Silently continue polling
-      }
-    }, 5000);
-
-    // Stop polling after 5 minutes as a safety net
-    setTimeout(() => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    }, 5 * 60 * 1000);
-  }, [showNotification, onSuccess]);
 
   const handleConfigChange = (field: string, value: any) => {
     if (field.includes('.')) {
@@ -174,44 +108,64 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
   };
 
   const handleScrape = async () => {
+    // Client-side validation
+    if (!config.credentials.id && !config.credentials.username) {
+      setError('ID or Username is required');
+      return;
+    }
+    if (!config.credentials.password) {
+      setError('Password is required');
+      return;
+    }
+    if (config.options.companyId === 'isracard' && !config.credentials.card6Digits) {
+      setError('Card 6 Digits are required for Isracard');
+      return;
+    }
+
+    if (config.options.companyId === 'isracard' && (!config.options.cardSuffixes || config.options.cardSuffixes.length === 0)) {
+      setError('At least one card suffix is required for Isracard');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+
+    const vendorName = config.credentials.nickname || config.options.companyId;
+    const taskId = addTask(config.options.companyId, config.credentials.nickname || 'User');
 
     try {
       const endpoint = config.options.companyId === 'isracard'
         ? '/api/scrape-isracard'
         : '/api/scrape';
 
-      // Fire the request but don't await the full scrape — it runs in background on the server
+      showNotification(`🔄 Scraping started for ${vendorName}...`, 'info');
+      onClose(); 
+
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config)
       });
 
-      // The scrape API responds immediately if there's a validation error,
-      // otherwise it runs in the background
+      const body = await response.json();
+
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error || body.message || `Failed to start scraping (${response.status})`);
+        const errorMsg = body.error || body.message || 'Scraping failed';
+        updateTask(taskId, 'failed', errorMsg);
+        showNotification(`❌ Scraping failed for ${vendorName}: ${errorMsg}`, 'error');
+      } else {
+        updateTask(taskId, 'success');
+        showNotification(`✅ Scraping completed for ${vendorName}!`, 'success');
+        
+        // Trigger dashboard reload without page refresh
+        window.dispatchEvent(new CustomEvent('dataRefresh'));
+
+        onSuccess?.();
       }
-
-      const vendorName = config.credentials.nickname || config.options.companyId;
-      showNotification(
-        `🔄 Scraping started for ${vendorName}. You'll be notified when it's done.`,
-        'info'
-      );
-
-      // Start polling for result
-      startPollingForResult(config.options.companyId, vendorName);
-
-      // Close the modal immediately — scraping continues in the background
-      onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setIsLoading(false);
+      const errorMsg = err instanceof Error ? err.message : 'An error occurred';
+      updateTask(taskId, 'failed', errorMsg);
+      showNotification(`❌ Scraping error for ${vendorName}: ${errorMsg}`, 'error');
     }
   };
 
@@ -242,15 +196,13 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       </FormControl>
 
       {BEINLEUMI_GROUP_VENDORS.includes(config.options.companyId) ? (
-        <>
-          <TextField
-            label="ID / Username"
-            value={config.credentials.id}
-            onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
-            fullWidth
-            helperText="Your ID number (no account number needed for this bank)"
-          />
-        </>
+        <TextField
+          label="ID / Username"
+          value={config.credentials.id || ''}
+          onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
+          fullWidth
+          helperText="Your ID number"
+        />
       ) : STANDARD_BANK_VENDORS.includes(config.options.companyId) ? (
         <>
           <TextField
@@ -261,7 +213,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           />
           <TextField
             label="Bank Account Number"
-            value={config.credentials.bankAccountNumber}
+            value={config.credentials.bankAccountNumber || ''}
             onChange={(e) => handleConfigChange('credentials.bankAccountNumber', e.target.value)}
             fullWidth
           />
@@ -269,7 +221,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       ) : config.options.companyId === 'visaCal' || config.options.companyId === 'max' ? (
         <TextField
           label="Username"
-          value={config.credentials.username}
+          value={config.credentials.username || ''}
           onChange={(e) => handleConfigChange('credentials.username', e.target.value)}
           fullWidth
         />
@@ -277,13 +229,13 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         <>
           <TextField
             label="ID"
-            value={config.credentials.id}
+            value={config.credentials.id || ''}
             onChange={(e) => handleConfigChange('credentials.id', e.target.value)}
             fullWidth
           />
           <TextField
             label="Card 6 Digits"
-            value={config.credentials.card6Digits}
+            value={config.credentials.card6Digits || ''}
             onChange={(e) => handleConfigChange('credentials.card6Digits', e.target.value)}
             fullWidth
           />
@@ -293,7 +245,7 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
       <TextField
         label="Password"
         type="password"
-        value={config.credentials.password}
+        value={config.credentials.password || ''}
         onChange={(e) => handleConfigChange('credentials.password', e.target.value)}
         fullWidth
       />
@@ -304,16 +256,13 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
           value={cardSuffixesText}
           onChange={(e) => setCardSuffixesText(e.target.value)}
           onBlur={() => {
-            const suffixes = cardSuffixesText
-              .split(',')
-              .map(s => s.trim())
-              .filter(s => s.length > 0);
+            const suffixes = cardSuffixesText.split(',').map(s => s.trim()).filter(s => s.length > 0);
             handleConfigChange('options.cardSuffixes', suffixes);
             setCardSuffixesText(suffixes.join(', '));
           }}
           fullWidth
           placeholder="e.g. 1111, 2222"
-          helperText="Last 4 digits of each card, comma-separated"
+          helperText="Last 4 digits, comma-separated"
         />
       )}
 
@@ -321,13 +270,8 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         label="Start Date"
         type="date"
         value={config.options.startDate.toISOString().split('T')[0]}
-        onChange={(e) => {
-          const v = clampDateString(e.target.value);
-          handleConfigChange('options.startDate', new Date(v));
-        }}
-        InputLabelProps={{
-          shrink: true,
-        }}
+        onChange={(e) => handleConfigChange('options.startDate', new Date(clampDateString(e.target.value)))}
+        InputLabelProps={{ shrink: true }}
         inputProps={{ max: todayStr }}
       />
     </>
@@ -345,172 +289,89 @@ export default function ScrapeModal({ isOpen, onClose, onSuccess, initialConfig 
         borderRadius: '12px',
         border: '1px solid #C7D2FE',
       }}>
-        <Box sx={{
-          width: 40,
-          height: 40,
-          borderRadius: '10px',
-          background: '#6366F1',
+        <Box sx={{ 
+          width: 56, 
+          height: 56, 
+          borderRadius: '14px', 
+          background: '#fff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#fff',
-          fontWeight: 700,
-          fontSize: '16px',
+          flexShrink: 0,
+          overflow: 'hidden',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.06)'
         }}>
-          {(config.credentials.nickname || config.options.companyId || '?')[0].toUpperCase()}
+          <img 
+            src={`/icons/providers/${config.options.companyId.toLowerCase()}.png?v=${new Date().getTime()}`} 
+            alt="" 
+            style={{ width: '85%', height: '85%', objectFit: 'contain' }} 
+            onError={(e) => { 
+              const tgt = e.target as HTMLImageElement;
+              tgt.src = 'https://ui-avatars.com/api/?name=' + config.options.companyId;
+            }} 
+          />
         </Box>
         <Box>
-          <Typography sx={{ fontWeight: 600, fontSize: '15px', color: '#1E1B4B' }}>
-            {config.credentials.nickname || 'Account'}
-          </Typography>
-          <Typography sx={{ fontSize: '13px', color: '#6366F1', fontWeight: 500 }}>
-            {config.options.companyId}
-          </Typography>
+          <Typography sx={{ fontWeight: 600, fontSize: '15px', color: '#1E1B4B' }}>{config.credentials.nickname || 'Account'}</Typography>
+          <Typography sx={{ fontSize: '13px', color: '#6366F1', fontWeight: 500 }}>{config.options.companyId}</Typography>
         </Box>
       </Box>
 
-      {config.credentials.username && (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
         <TextField
-          label="Username"
-          value={config.credentials.username}
-          disabled
-          fullWidth
+          label="Start Date"
+          type="date"
+          value={config.options.startDate.toISOString().split('T')[0]}
+          onChange={(e) => handleConfigChange('options.startDate', new Date(clampDateString(e.target.value)))}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ max: todayStr }}
           size="small"
+          autoFocus
         />
-      )}
-      {config.credentials.id && (
-        <TextField
-          label="ID"
-          value={config.credentials.id}
-          disabled
-          fullWidth
-          size="small"
-        />
-      )}
-      {config.credentials.card6Digits && (
-        <TextField
-          label="Card 6 Digits"
-          value={config.credentials.card6Digits}
-          disabled
-          fullWidth
-          size="small"
-        />
-      )}
-      {config.credentials.bankAccountNumber && (
-        <TextField
-          label="Bank Account Number"
-          value={config.credentials.bankAccountNumber}
-          disabled
-          fullWidth
-          size="small"
-        />
-      )}
 
-      {config.options.companyId === 'isracard' && (
-        <TextField
-          label="Card Suffixes"
-          value={(config.options.cardSuffixes || []).join(', ') || '—'}
-          disabled
-          fullWidth
-          size="small"
-        />
-      )}
-
-      <TextField
-        label="Start Date"
-        type="date"
-        value={config.options.startDate.toISOString().split('T')[0]}
-        onChange={(e) => {
-          const v = clampDateString(e.target.value);
-          handleConfigChange('options.startDate', new Date(v));
-        }}
-        InputLabelProps={{
-          shrink: true,
-        }}
-        inputProps={{ max: todayStr }}
-      />
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          p: 1.5,
+          borderRadius: '10px',
+          bgcolor: config.options.showBrowser ? '#EEF2FF' : '#F8FAFC',
+          border: '1px solid',
+          borderColor: config.options.showBrowser ? '#C7D2FE' : '#E2E8F0',
+          transition: 'all 0.2s'
+        }}>
+          <Typography sx={{ fontSize: '13px', fontWeight: 600, color: config.options.showBrowser ? '#4F46E5' : '#64748B' }}>
+            Debug Mode (Show Browser)
+          </Typography>
+          <input 
+            type="checkbox"
+            checked={config.options.showBrowser}
+            onChange={(e) => handleConfigChange('options.showBrowser', e.target.checked)}
+            style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+          />
+        </Box>
+      </Box>
     </>
   );
 
   return (
-    <Dialog 
-      open={isOpen} 
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        style: {
-          background: '#FFFFFF',
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-          border: '1px solid #E5E7EB'
-        }
-      }}
-      BackdropProps={{
-        style: {
-          backgroundColor: 'rgba(17, 24, 39, 0.5)',
-          backdropFilter: 'blur(4px)'
-        }
-      }}
-    >
+    <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ style: { borderRadius: '12px' } }}>
       <ModalHeader title="Scrape" onClose={onClose} />
-      <DialogContent style={{ padding: '0 32px 32px', color: '#111827' }}>
-        {error && (
-          <div style={{
-            background: '#FEE2E2',
-            color: '#DC2626',
-            border: '1px solid #FECACA',
-            padding: '16px',
-            borderRadius: '8px',
-            marginTop: '16px',
-            marginBottom: '16px',
-          }}>
-            {error}
-          </div>
-        )}
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 3, maxHeight: '450px', overflow: 'auto', paddingRight: '12px' }}>
-          {initialConfig ? renderExistingAccountForm() : renderNewScrapeForm()}
-        </Box>
+      <DialogContent sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {error && <Box sx={{ p: 2, bgcolor: '#FEE2E2', color: '#DC2626', borderRadius: '8px' }}>{error}</Box>}
+        {initialConfig ? renderExistingAccountForm() : renderNewScrapeForm()}
       </DialogContent>
-      <DialogActions style={{ padding: '0 32px 32px', gap: '16px' }}>
-        <Button 
-          onClick={onClose} 
-          sx={{ 
-            color: '#64748b',
-            textTransform: 'none',
-            fontWeight: 600
-          }}
-        >
-          Cancel
-        </Button>
+      <DialogActions sx={{ p: 3, gap: 2 }}>
+        <Button onClick={onClose} sx={{ color: '#64748B', fontWeight: 600 }}>Cancel</Button>
         <Button
           onClick={handleScrape}
           variant="contained"
           disabled={isLoading}
-          startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : undefined}
-          sx={{
-            backgroundColor: '#6366F1',
-            borderRadius: '8px',
-            padding: '10px 32px',
-            textTransform: 'none',
-            fontWeight: 500,
-            boxShadow: 'none',
-            '&:hover': {
-              backgroundColor: '#4F46E5',
-              boxShadow: 'none',
-            },
-            '&:focus': {
-              outline: 'none',
-            },
-            '&:focus-visible': {
-              outline: 'none',
-            }
-          }}
+          sx={{ bgcolor: '#6366F1', borderRadius: '8px', px: 4, fontWeight: 500 }}
         >
-          {isLoading ? 'Starting...' : 'SCRAPE'}
+          {isLoading ? 'Processing...' : 'SCRAPE'}
         </Button>
       </DialogActions>
     </Dialog>
   );
-} 
+}

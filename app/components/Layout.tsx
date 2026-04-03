@@ -1,6 +1,7 @@
 import React from "react";
-import ResponsiveAppBar from "./menu";
+import AppShell from "./menu";
 import { NotificationProvider } from "./NotificationContext";
+import { ScrapeProvider } from "./ScrapeContext";
 import ScrapeQueue from "./ScrapeQueue";
 
 interface LayoutProps {
@@ -10,11 +11,12 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <NotificationProvider>
-      <div>
-        <ResponsiveAppBar />
-        <main>{children}</main>
+      <ScrapeProvider>
+        <AppShell>
+          {children}
+        </AppShell>
         <ScrapeQueue />
-      </div>
+      </ScrapeProvider>
     </NotificationProvider>
   );
 };

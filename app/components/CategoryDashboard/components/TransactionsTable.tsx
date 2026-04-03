@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, TableBody, TableCell, TableHead, TableRow, Paper, Box, Typography, IconButton, TextField, Autocomplete } from '@mui/material';
+import { Box, Typography, IconButton, TextField, Autocomplete, Tooltip, Avatar } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
@@ -7,7 +7,14 @@ import CloseIcon from '@mui/icons-material/Close';
 import { formatNumber, getCurrencySymbol } from '../utils/formatUtils';
 import { dateUtils } from '../utils/dateUtils';
 import { useCategories } from '../utils/useCategories';
-import { TABLE_HEADER_CELL_STYLE, TABLE_BODY_CELL_STYLE, TABLE_ROW_HOVER_STYLE, TABLE_ROW_HOVER_BACKGROUND } from '../utils/tableStyles';
+
+const VENDOR_LOGOS: Record<string, string> = {
+  isracard: 'isracard.co.il', amex: 'americanexpress.co.il', visacal: 'cal-online.co.il',
+  max: 'max.co.il', hapoalim: 'bankhapoalim.co.il', leumi: 'leumi.co.il',
+  mizrahi: 'mizrahi-tefahot.co.il', discount: 'discountbank.co.il',
+  otsarhahayal: 'fibi.co.il', beinleumi: 'fibi.co.il', massad: 'bankmassad.co.il',
+  yahav: 'bank-yahav.co.il', union: 'unionbank.co.il',
+};
 
 interface Transaction {
   name: string;
@@ -22,252 +29,234 @@ interface TransactionsTableProps {
   transactions: Transaction[];
   isLoading?: boolean;
   onDelete?: (transaction: Transaction) => void;
-  onUpdate?: (transaction: Transaction, newPrice: number, newCategory?: string) => void;
+  onUpdate?: (transaction: Transaction, newPrice: number, newCategory?: string, newName?: string) => void;
 }
 
 const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isLoading, onDelete, onUpdate }) => {
-  const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editPrice, setEditPrice] = React.useState<string>('');
   const [editCategory, setEditCategory] = React.useState<string>('');
+  const [editName, setEditName] = React.useState<string>('');
   const { categories: availableCategories } = useCategories();
 
-  const handleEditClick = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-    setEditPrice(Math.abs(transaction.price).toString());
-    setEditCategory(transaction.category);
+  const handleEditClick = (tx: Transaction) => {
+    setEditingId(tx.identifier);
+    setEditPrice(Math.abs(tx.price).toString());
+    setEditCategory(tx.category);
+    setEditName(tx.name);
   };
 
-  const handleSaveClick = () => {
-    if (editingTransaction && editPrice) {
+  const handleSaveClick = (tx: Transaction) => {
+    if (editingId && editPrice) {
       const newPrice = parseFloat(editPrice);
       if (!isNaN(newPrice)) {
-        const priceWithSign = editingTransaction.price < 0 ? -newPrice : newPrice;
-        onUpdate?.(editingTransaction, priceWithSign, editCategory);
-        setEditingTransaction(null);
+        onUpdate?.(tx, tx.price < 0 ? -newPrice : newPrice, editCategory, editName);
+        setEditingId(null);
       }
     }
   };
 
-  const handleCancelClick = () => {
-    setEditingTransaction(null);
-  };
-
-  const handleRowClick = (transaction: Transaction) => {
-    // If clicking on a different row while editing, save the current changes
-    if (editingTransaction && editingTransaction.identifier !== transaction.identifier) {
-      handleSaveClick();
-    }
-  };
-
-  const handleTableClick = (e: React.MouseEvent) => {
-    // If clicking on the table background (not on a row), save current changes
-    if (editingTransaction && (e.target as HTMLElement).tagName === 'TABLE') {
-      handleSaveClick();
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
-        <Typography>Loading transactions...</Typography>
-      </Box>
-    );
-  }
-
-  if (!transactions || transactions.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
-        <Typography>No transactions found</Typography>
-      </Box>
-    );
-  }
+  if (isLoading) return <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>;
+  if (!transactions?.length) return <Box sx={{ p: 4, textAlign: 'center', color: '#64748b' }}>No transactions found</Box>;
 
   return (
-    <Paper sx={{ 
-      width: '100%', 
-      overflow: 'hidden', 
-      borderRadius: '12px',
-      background: '#FFFFFF',
-      boxShadow: 'none',
-    }}>
-      <Table
-        onClick={handleTableClick}
-        sx={{ tableLayout: 'fixed' }}
-      >
-        <TableHead>
-          <TableRow>
-            <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '30%' }}>Description</TableCell>
-            <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '25%' }}>Category</TableCell>
-            <TableCell align="right" style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Amount</TableCell>
-            <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Date</TableCell>
-            <TableCell align="center" style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {transactions.map((transaction, index) => (
-            <TableRow 
-              key={index}
-              onClick={() => handleRowClick(transaction)}
-              style={TABLE_ROW_HOVER_STYLE}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = TABLE_ROW_HOVER_BACKGROUND;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <TableCell style={TABLE_BODY_CELL_STYLE}>
-                {transaction.name}
-              </TableCell>
-              <TableCell style={TABLE_BODY_CELL_STYLE}>
-                {editingTransaction?.identifier === transaction.identifier ? (
-                  <Autocomplete
-                    value={editCategory}
-                    onChange={(event, newValue) => setEditCategory(newValue || '')}
-                    onInputChange={(event, newInputValue) => setEditCategory(newInputValue)}
-                    freeSolo
-                    options={availableCategories}
-                    size="small"
-                    sx={{
-                      minWidth: 150,
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
-                          borderColor: '#e2e8f0',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: '#3b82f6',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#3b82f6',
-                        },
-                      },
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder="Enter category..."
-                        sx={{
-                          '& .MuiInputBase-input': {
-                            fontSize: '14px',
-                            padding: '8px 12px',
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                ) : (
-                  <span
-                    style={{
-                      cursor: 'pointer',
-                      padding: '4px 12px',
-                      borderRadius: '9999px',
-                      transition: 'all 0.2s ease-in-out',
-                      display: 'inline-block',
-                      minWidth: '60px',
-                      textAlign: 'center',
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                      color: '#3b82f6',
-                      fontWeight: '500',
-                      fontSize: '13px'
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRowClick(transaction);
-                      handleEditClick(transaction);
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-                    }}
-                  >
-                    {transaction.category}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell 
-                align="right" 
-                style={{ 
-                  ...TABLE_BODY_CELL_STYLE,
-                  color: transaction.price < 0 ? '#ef4444' : '#10b981',
-                  fontWeight: 600
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'minmax(200px, 2fr) 140px 120px 100px 90px', 
+        px: 3, 
+        pb: 1.5, 
+        borderBottom: '1px solid rgba(229, 231, 235, 0.5)' 
+      }}>
+        <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</Typography>
+        <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</Typography>
+        <Typography align="right" sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</Typography>
+        <Typography align="right" sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</Typography>
+        <Typography align="right" sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</Typography>
+      </Box>
+
+      {/* Rows */}
+      {transactions.map((tx) => {
+        const isEditing = editingId === tx.identifier;
+        const vendorKey = tx.vendor?.toLowerCase().replace(/\s/g, '');
+        const logoUrl = VENDOR_LOGOS[vendorKey] ? `https://logo.clearbit.com/${VENDOR_LOGOS[vendorKey]}` : null;
+
+        return (
+          <Box
+            key={tx.identifier}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(200px, 2fr) 140px 120px 100px 90px',
+              alignItems: 'center',
+              px: 3,
+              py: 1.5,
+              background: isEditing ? '#F8FAFC' : '#FFFFFF',
+              borderRadius: '12px',
+              border: '1px solid',
+              borderColor: isEditing ? '#6366F1' : 'transparent',
+              transition: 'all 0.2s ease',
+              cursor: isEditing ? 'default' : 'pointer',
+              '&:hover': {
+                background: '#F8FAFC',
+              }
+            }}
+            onDoubleClick={() => !isEditing && handleEditClick(tx)}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar 
+                src={logoUrl || undefined}
+                sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  fontSize: '14px', 
+                  bgcolor: '#F1F5F9', 
+                  color: '#64748b',
+                  border: '1px solid #E2E8F0'
                 }}
               >
-                {editingTransaction?.identifier === transaction.identifier ? (
-                  <TextField
-                    value={editPrice}
-                    onChange={(e) => setEditPrice(e.target.value)}
-                    size="small"
-                    type="number"
-                    inputProps={{ 
-                      style: { 
-                        textAlign: 'right',
-                        color: transaction.price < 0 ? '#F87171' : '#4ADE80'
-                      } 
+                {tx.name?.charAt(0)}
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                {isEditing ? (
+                  <TextField 
+                    size="small" 
+                    fullWidth 
+                    value={editName} 
+                    onChange={e => setEditName(e.target.value)} 
+                    variant="standard" 
+                    autoFocus 
+                    InputProps={{ disableUnderline: true }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'Escape') {
+                        handleSaveClick(tx);
+                      }
                     }}
                     sx={{ 
-                      width: '100px',
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
-                          borderColor: transaction.price < 0 ? '#F87171' : '#4ADE80',
-                        },
-                      },
+                      '& .MuiInputBase-input': { 
+                        fontWeight: 600, 
+                        fontSize: '14px', 
+                        p: '4px 8px', 
+                        bgcolor: '#FFF', 
+                        borderRadius: '6px',
+                        border: '1px solid #E2E8F0'
+                      } 
                     }}
                   />
                 ) : (
-                  `${getCurrencySymbol()}${formatNumber(Math.abs(transaction.price))}`
+                  <Typography sx={{ fontWeight: 600, fontSize: '14px', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {tx.name}
+                  </Typography>
                 )}
-              </TableCell>
-              <TableCell style={{ ...TABLE_BODY_CELL_STYLE, color: '#64748b' }}>
-                {dateUtils.formatDate(transaction.date)}
-              </TableCell>
-              <TableCell align="right" style={TABLE_BODY_CELL_STYLE}>
-                {editingTransaction?.identifier === transaction.identifier ? (
-                  <>
-                    <IconButton 
-                      onClick={handleSaveClick}
-                      sx={{ color: '#4ADE80' }}
-                    >
-                      <CheckIcon />
-                    </IconButton>
-                    <IconButton 
-                      onClick={handleCancelClick}
-                      sx={{ color: '#ef4444' }}
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </>
-                ) : (
-                  <>
-                    <IconButton 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRowClick(transaction);
-                        handleEditClick(transaction);
+                {!isEditing && <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>{tx.vendor}</Typography>}
+              </Box>
+            </Box>
+
+            <Box>
+              {isEditing ? (
+                <Autocomplete
+                  size="small"
+                  options={availableCategories}
+                  value={editCategory}
+                  onChange={(_, val) => setEditCategory(val || '')}
+                  freeSolo
+                  renderInput={(params) => (
+                    <TextField 
+                      {...params} 
+                      variant="standard" 
+                      InputProps={{ ...params.InputProps, disableUnderline: true }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === 'Escape') {
+                          handleSaveClick(tx);
+                        }
                       }}
-                      sx={{ color: '#3b82f6' }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete?.(transaction);
+                      sx={{ 
+                        '& .MuiInputBase-input': { 
+                          fontSize: '11px', 
+                          fontWeight: 700,
+                          p: '4px 8px !important', 
+                          bgcolor: '#FFF', 
+                          borderRadius: '6px',
+                          border: '1px solid #E2E8F0',
+                          textTransform: 'uppercase'
+                        } 
                       }}
-                      sx={{ color: '#ef4444' }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Paper>
+                    />
+                  )}
+                />
+              ) : (
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: 'rgba(99, 102, 241, 0.08)',
+                  color: '#6366F1',
+                  textTransform: 'uppercase'
+                }}>{tx.category}</span>
+              )}
+            </Box>
+
+            <Typography align="right" sx={{ 
+              fontWeight: 700, 
+              fontSize: '15px'
+            }}>
+              {isEditing ? (
+                <TextField 
+                  size="small" 
+                  type="number" 
+                  value={editPrice} 
+                  onChange={e => setEditPrice(e.target.value)}
+                  variant="standard"
+                  InputProps={{ disableUnderline: true }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
+                      handleSaveClick(tx);
+                    }
+                  }}
+                  sx={{ 
+                    width: '100px',
+                    '& .MuiInputBase-input': { 
+                      fontWeight: 700, 
+                      fontSize: '15px', 
+                      p: '4px 8px', 
+                      bgcolor: '#FFF', 
+                      borderRadius: '6px',
+                      border: '1px solid #E2E8F0',
+                      textAlign: 'right',
+                      color: tx.price < 0 ? '#EF4444' : '#10B981'
+                    } 
+                  }}
+                />
+              ) : (
+                <span style={{ color: tx.price < 0 ? '#EF4444' : '#10B981' }}>
+                  {getCurrencySymbol()}{formatNumber(Math.abs(tx.price))}
+                </span>
+              )}
+            </Typography>
+
+            <Typography align="right" sx={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
+              {dateUtils.formatDate(tx.date)}
+            </Typography>
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+              {isEditing ? (
+                <>
+                  <IconButton size="small" color="success" onClick={() => handleSaveClick(tx)}><CheckIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" color="error" onClick={() => setEditingId(null)}><CloseIcon fontSize="small" /></IconButton>
+                </>
+              ) : (
+                <>
+                  <IconButton size="small" sx={{ color: '#94A3B8', '&:hover': { color: '#6366F1', background: '#EEF2FF' } }} onClick={() => handleEditClick(tx)}><EditIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" sx={{ color: '#94A3B8', '&:hover': { color: '#EF4444', background: '#FEF2F2' } }} onClick={() => onDelete?.(tx)}><DeleteIcon fontSize="small" /></IconButton>
+                </>
+              )}
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
   );
 };
 
-export default TransactionsTable; 
+export default TransactionsTable;

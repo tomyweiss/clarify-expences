@@ -1,6 +1,7 @@
 import React from 'react';
 import { SvgIconComponent } from '@mui/icons-material';
 import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 import { formatNumber, getCurrencySymbol } from '../utils/format';
 
 interface CardProps {
@@ -15,6 +16,7 @@ interface CardProps {
   secondaryValue?: number;
   secondaryColor?: string;
   secondaryLabel?: string;
+  layout?: 'split' | 'stacked';
 }
 
 const Card: React.FC<CardProps> = ({ 
@@ -23,129 +25,109 @@ const Card: React.FC<CardProps> = ({
   color, 
   icon: Icon, 
   onClick, 
-  isLoading = false,
+  isLoading, 
   size = 'medium',
   secondaryValue,
   secondaryColor,
-  secondaryLabel
+  secondaryLabel,
+  layout = 'stacked'
 }) => {
-  const padding = size === 'large' ? '32px' : '20px';
-  const titleSize = size === 'large' ? '16px' : '20px';
-  const valueSize = size === 'large' ? '36px' : '24px';
-  const secondaryValueSize = size === 'large' ? '20px' : '16px';
-  const iconSize = size === 'large' ? '36px' : '32px';
-  const iconPadding = size === 'large' ? '14px' : '12px';
-  const iconBorderRadius = size === 'large' ? '12px' : '16px';
+  const isLarge = size === 'large';
+  const iconSize = isLarge ? 32 : 24;
+  const valueSize = isLarge ? '32px' : '26px';
+  const iconPadding = isLarge ? '16px' : '12px';
 
   return (
-    <div
+    <div 
+      onClick={onClick}
       style={{
         background: '#FFFFFF',
-        borderRadius: '12px',
-        padding: padding,
-        width: '100%',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-        display: 'flex',
-        flexDirection: 'column',
+        borderRadius: '28px',
+        padding: '20px 24px',
         position: 'relative',
-        overflow: 'hidden',
-        border: '1px solid #E5E7EB',
-        cursor: onClick ? (isLoading ? 'default' : 'pointer') : 'default',
-        transition: 'all 0.2s ease-in-out'
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        border: '1.5px solid #F1F5F9',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden'
       }}
-      onClick={isLoading ? undefined : onClick}
       onMouseEnter={(e) => {
-        if (!isLoading && onClick) {
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = `0 4px 6px ${color}15`;
-          (e.currentTarget as HTMLDivElement).style.borderColor = `${color}40`;
+        if (onClick) {
+          e.currentTarget.style.borderColor = '#E2E8F0';
+          e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.02)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
         }
       }}
       onMouseLeave={(e) => {
-        if (!isLoading) {
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          (e.currentTarget as HTMLDivElement).style.borderColor = '#E5E7EB';
+        if (onClick) {
+          e.currentTarget.style.borderColor = '#F1F5F9';
+          e.currentTarget.style.boxShadow = 'none';
+          e.currentTarget.style.transform = 'translateY(0)';
         }
       }}
     >
       {isLoading && (
         <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2,
-          borderRadius: '12px'
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(255, 255, 255, 0.8)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: '28px', zIndex: 10
         }}>
-          <CircularProgress size={40} style={{ color: color }} />
+          <CircularProgress size={20} style={{ color: color }} />
         </div>
       )}
-      
-      <div style={{
-        display: 'flex',
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-        gap: '16px'
-      }}>
-        <div style={{
-          background: `${color}15`,
-          borderRadius: '12px',
-          padding: iconPadding,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          zIndex: 1,
-          flexShrink: 0
+
+      {/* Header: Minimalist Labels & Large Colored Icon */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <h3 style={{ 
+          margin: 0, 
+          color: '#94A3B8', 
+          fontSize: '15px', 
+          fontWeight: '700', 
+          textTransform: 'uppercase', 
+          letterSpacing: '0.05em',
+          fontFamily: "'Inter', sans-serif"
         }}>
-          <Icon sx={{ fontSize: iconSize, color: color }} />
-        </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <h3 style={{ 
-            margin: '0 0 4px 0',
-            color: '#6B7280',
-            fontSize: '13px',
-            fontWeight: '600',
-          }}>{title}</h3>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ 
-              fontSize: valueSize, 
-              fontWeight: '700', 
-              color: '#111827',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.2
-            }}>
-              {getCurrencySymbol()}{formatNumber(value || 0)}
-            </span>
-            {secondaryValue !== undefined && (
-              <>
-                <span style={{ 
-                  fontSize: '14px', 
-                  fontWeight: '500', 
-                  color: '#D1D5DB',
-                }}>
-                  |
-                </span>
-                <span style={{ 
-                  fontSize: '14px', 
-                  fontWeight: '600', 
-                  color: secondaryColor || '#6B7280',
-                }}>
-                  {secondaryLabel && `${secondaryLabel}: `}${formatNumber(secondaryValue)}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+          {title}
+        </h3>
+        <Icon sx={{ fontSize: '32px', color: color, opacity: 0.75 }} />
       </div>
+
+      {/* Hero Value - Sharp & Established */}
+      <div style={{ marginBottom: secondaryValue !== undefined ? '12px' : '0' }}>
+        <span style={{ 
+          fontSize: isLarge ? '32px' : '28px', 
+          fontWeight: '800', 
+          color: '#334155', 
+          letterSpacing: '-0.04em', 
+          lineHeight: 1,
+          fontFamily: "'Outfit', sans-serif",
+          display: 'block'
+        }}>
+          {getCurrencySymbol()}{formatNumber(value || 0)}
+        </span>
+      </div>
+
+      {/* Secondary Metrics - Delicate footer */}
+      {secondaryValue !== undefined && (
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '6px',
+        }}>
+          <Typography sx={{ 
+            fontSize: '12px', 
+            fontWeight: '600', 
+            color: '#BDBEC6',
+            fontFamily: "'Inter', sans-serif"
+          }}>
+            <span style={{ fontWeight: 500 }}>{secondaryLabel || 'Total'}:</span> {getCurrencySymbol()}{formatNumber(secondaryValue)}
+          </Typography>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Card; 
+export default Card;

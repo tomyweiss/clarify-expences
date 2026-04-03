@@ -141,19 +141,31 @@ export function isHeadless(options) {
   return process.env.SCRAPE_HEADLESS !== 'false';
 }
 
-export async function createAuditEntry(client, triggeredBy, vendor, startDate) {
-  const result = await client.query(
-    `INSERT INTO scrape_events (triggered_by, vendor, start_date, status, message)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [triggeredBy, vendor, new Date(startDate), 'started', 'Scrape initiated']
-  );
-  return result.rows[0]?.id;
+export async function createScrapeEvent(client, vendor, startDate, triggeredBy) {
+  try {
+    const result = await client.query(
+      `INSERT INTO scrape_events (vendor, start_date, triggered_by, status) 
+       VALUES ($1, $2, $3, 'started') 
+       RETURNING id`,
+      [vendor, new Date(startDate), triggeredBy || 'System']
+    );
+    return result.rows[0].id;
+  } catch (error) {
+    console.error('Error creating scrape event:', error);
+    return null;
+  }
 }
 
-export async function updateAuditEntry(client, auditId, status, message) {
-  if (!auditId) return;
-  await client.query(
-    `UPDATE scrape_events SET status = $1, message = $2 WHERE id = $3`,
-    [status, message, auditId]
-  );
+export async function updateScrapeEvent(client, eventId, status, message) {
+  if (!eventId) return;
+  try {
+    await client.query(
+      `UPDATE scrape_events 
+       SET status = $1, message = $2 
+       WHERE id = $3`,
+      [status, message, eventId]
+    );
+  } catch (error) {
+    console.error('Error updating scrape event:', error);
+  }
 }

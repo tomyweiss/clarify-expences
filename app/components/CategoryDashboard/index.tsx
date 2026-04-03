@@ -1,5 +1,6 @@
 import React from 'react';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import TableChartIcon from '@mui/icons-material/TableChart';
@@ -98,6 +99,25 @@ const CategoryDashboard: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
+    // Inject animation styles
+    if (typeof document !== 'undefined') {
+      const style = document.createElement('style');
+      style.innerHTML = `
+        @keyframes elegantFadeInUp {
+          from { opacity: 0; transform: translateY(12px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .elegant-card-entrance {
+          animation: elegantFadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          opacity: 0;
+        }
+      `;
+      document.head.appendChild(style);
+      return () => { document.head.removeChild(style); };
+    }
+  }, []);
+
+  React.useEffect(() => {
     getAvailableMonths();
 
     // Add event listener for data refresh
@@ -107,7 +127,7 @@ const CategoryDashboard: React.FC = () => {
     return () => {
       window.removeEventListener('dataRefresh', handleDataRefresh);
     };
-  }, []);
+  }, [handleDataRefresh]);
 
   React.useEffect(() => {
     if (showTransactionsTable) {
@@ -390,11 +410,14 @@ const CategoryDashboard: React.FC = () => {
     }
   };
 
-  const handleUpdateTransaction = async (transaction: any, newPrice: number, newCategory?: string) => {
+  const handleUpdateTransaction = async (transaction: any, newPrice: number, newCategory?: string, newName?: string) => {
     try {
       const updateData: any = { price: newPrice };
       if (newCategory !== undefined) {
         updateData.category = newCategory;
+      }
+      if (newName !== undefined) {
+        updateData.name = newName;
       }
 
       const response = await fetch(`/api/transactions/${transaction.identifier}|${transaction.vendor}`, {
@@ -409,7 +432,7 @@ const CategoryDashboard: React.FC = () => {
         // Update the transaction in the local state
         setTransactions(transactions.map(t => 
           t.identifier === transaction.identifier && t.vendor === transaction.vendor
-            ? { ...t, price: newPrice, ...(newCategory !== undefined && { category: newCategory }) }
+            ? { ...t, price: newPrice, ...(newCategory !== undefined && { category: newCategory }), ...(newName !== undefined && { name: newName }) }
             : t
         ));
         // Refresh the data to update the metrics
@@ -426,14 +449,14 @@ const CategoryDashboard: React.FC = () => {
     <div style={{ 
       minHeight: '100vh',
       position: 'relative',
-      background: '#F9FAFB',
+      background: '#F5F5F5',
       overflow: 'hidden'
     }}>
       
       {/* Main content container */}
       <div style={{ 
-        padding: '24px 16px',
-        maxWidth: '1152px',
+        padding: '32px 40px',
+        maxWidth: '1100px',
         margin: '0 auto',
         position: 'relative',
         zIndex: 1
@@ -442,20 +465,9 @@ const CategoryDashboard: React.FC = () => {
       {/* Hero Section */}
       <div style={{
         marginBottom: '32px',
-        marginTop: '80px',
         position: 'relative',
         overflow: 'hidden'
       }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: '300px',
-          height: '300px',  
-          background: 'radial-gradient(circle, rgba(96, 165, 250, 0.1) 0%, transparent 70%)',
-          filter: 'blur(40px)',
-          zIndex: 0
-        }} />
         <div style={{
           position: 'relative',
           zIndex: 1,
@@ -463,7 +475,9 @@ const CategoryDashboard: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '24px'
+          gap: '24px',
+          paddingBottom: '24px',
+          borderBottom: '1px solid rgba(229, 231, 235, 0.5)'
         }}>
           <div>
             <h1 style={{
@@ -471,40 +485,44 @@ const CategoryDashboard: React.FC = () => {
               fontWeight: 700,
               margin: 0,
               color: '#111827'
-            }}>Financial Overview</h1>
+            }}>Finance</h1>
           </div>
           <div style={{
             display: 'flex',
             gap: '16px',
             alignItems: 'center'
           }}>
-            <IconButton
-              onClick={handleRefreshClick}
-              style={BUTTON_STYLE}
-              onMouseEnter={(e) => Object.assign(e.currentTarget.style, HOVER_BUTTON_STYLE)}
-              onMouseLeave={(e) => Object.assign(e.currentTarget.style, BUTTON_STYLE)}
-            >
-              <RefreshIcon />
-            </IconButton>
-            <IconButton
-              onClick={handleTransactionsTableClick}
-              style={{
-                ...BUTTON_STYLE,
-                ...(showTransactionsTable ? {
-                  background: '#6366F1',
-                  borderColor: '#6366F1',
-                  color: '#FFFFFF'
-                } : {})
-              }}
-              onMouseEnter={(e) => {
-                if (!showTransactionsTable) Object.assign(e.currentTarget.style, HOVER_BUTTON_STYLE)
-              }}
-              onMouseLeave={(e) => {
-                if (!showTransactionsTable) Object.assign(e.currentTarget.style, BUTTON_STYLE)
-              }}
-            >
-              <TableChartIcon />
-            </IconButton>
+            <Tooltip title="Refresh Dashboard" arrow>
+              <IconButton
+                onClick={handleRefreshClick}
+                style={BUTTON_STYLE}
+                onMouseEnter={(e) => Object.assign(e.currentTarget.style, HOVER_BUTTON_STYLE)}
+                onMouseLeave={(e) => Object.assign(e.currentTarget.style, BUTTON_STYLE)}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={showTransactionsTable ? "Hide Transactions Table" : "Show Transactions Table"} arrow>
+              <IconButton
+                onClick={handleTransactionsTableClick}
+                style={{
+                  ...BUTTON_STYLE,
+                  ...(showTransactionsTable ? {
+                    background: '#6366F1',
+                    borderColor: '#6366F1',
+                    color: '#FFFFFF'
+                  } : {})
+                }}
+                onMouseEnter={(e) => {
+                  if (!showTransactionsTable) Object.assign(e.currentTarget.style, HOVER_BUTTON_STYLE)
+                }}
+                onMouseLeave={(e) => {
+                  if (!showTransactionsTable) Object.assign(e.currentTarget.style, BUTTON_STYLE)
+                }}
+              >
+                <TableChartIcon />
+              </IconButton>
+            </Tooltip>
             <select 
               value={selectedYear}
               onChange={handleYearChange}
@@ -538,30 +556,40 @@ const CategoryDashboard: React.FC = () => {
       {/* Summary Cards Section */}
       <div style={{ 
         display: 'flex',
-        gap: '32px',
-        marginTop: '48px',
-        marginBottom: '40px'
+        gap: '24px',
+        marginTop: '32px',
+        marginBottom: '32px'
       }}>
-        <Card
-          title="Bank Transactions" 
-          value={bankTransactions.income}
-          color="#4ADE80"
-          icon={MonetizationOnIcon}
-          onClick={handleBankTransactionsClick}
-          isLoading={loadingBankTransactions}
-          size="medium"
-          secondaryValue={bankTransactions.expenses}
-          secondaryColor="#F87171"
-        />
-        <Card 
-          title="Credit Card Transactions" 
-          value={creditCardTransactions} 
-          color="#3B82F6"
-          icon={CreditCardIcon}
-          onClick={handleTotalCreditCardExpensesClick}
-          isLoading={loadingBankTransactions}
-          size="medium"
-        />
+        <div className="elegant-card-entrance" style={{ flex: 1, animationDelay: '0.1s' }}>
+          <Card
+            title="Overview & Balance" 
+            value={bankTransactions.income}
+            color="#4ADE80"
+            icon={MonetizationOnIcon}
+            onClick={handleBankTransactionsClick}
+            isLoading={loadingBankTransactions}
+            size="medium"
+            secondaryValue={bankTransactions.expenses}
+            secondaryColor="#F87171"
+            secondaryLabel="Expenses"
+            layout="split"
+          />
+        </div>
+        <div className="elegant-card-entrance" style={{ flex: 1, animationDelay: '0.2s' }}>
+          <Card 
+            title="Total Expenses" 
+            value={creditCardTransactions + (bankTransactions.expenses || 0)} 
+            color="#3B82F6"
+            icon={CreditCardIcon}
+            onClick={handleTotalCreditCardExpensesClick}
+            isLoading={loadingBankTransactions}
+            size="medium"
+            secondaryValue={creditCardTransactions}
+            secondaryLabel="Card"
+            secondaryColor="#6366F1"
+            layout="split"
+          />
+        </div>
       </div>
 
       {showTransactionsTable ? (
@@ -581,51 +609,58 @@ const CategoryDashboard: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Categories Section Header */}
           <div style={{
-            marginBottom: '32px',
+            marginBottom: '40px',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px'
+            gap: '16px',
+            marginTop: '16px'
           }}>
-            <div style={{
-              height: '1px',
-              flex: 1,
-              background: '#E5E7EB',
+            <div style={{ 
+              height: '1px', 
+              flex: 1, 
+              background: 'linear-gradient(to right, transparent, rgba(229, 231, 235, 0.8))',
             }} />
             <h2 style={{
-              fontSize: '14px',
-              fontWeight: 600,
+              fontSize: '11px',
+              fontWeight: 700,
               margin: 0,
-              color: '#6B7280',
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase'
+              color: '#94A3B8',
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+              padding: '0 8px'
             }}>Expense Categories</h2>
-            <div style={{
-              height: '1px',
-              flex: 1,
-              background: '#E5E7EB',
+            <div style={{ 
+              height: '1px', 
+              flex: 1, 
+              background: 'linear-gradient(to left, transparent, rgba(229, 231, 235, 0.8))',
             }} />
           </div>
           <div style={{ 
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '32px',
+            gap: '24px',
             width: '100%',
             boxSizing: 'border-box'
           }}>
           {categories.length > 0 ? (
             categories.map((category, index) => (
-              <Card
-                key={"category-" + index}
-                title={category.name}
-                value={category.value}
-                color={category.color}
-                icon={category.icon}
-                onClick={() => handleCategoryClick(category.name)}
-                isLoading={loadingCategory === category.name}
-                size="medium"
-              />
+              <div 
+                key={"category-container-" + index} 
+                className="elegant-card-entrance" 
+                style={{ animationDelay: `${0.3 + (index * 0.05)}s` }}
+              >
+                <Card
+                  key={"category-" + index}
+                  title={category.name}
+                  value={category.value}
+                  color={category.color}
+                  icon={category.icon}
+                  onClick={() => handleCategoryClick(category.name)}
+                  isLoading={loadingCategory === category.name}
+                  size="medium"
+                />
+              </div>
             ))
           ) : (
             <div style={{

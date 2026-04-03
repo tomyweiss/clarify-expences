@@ -16,9 +16,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import { ExpensesModalProps, Expense } from '../types';
 import { formatNumber, getCurrencySymbol } from '../utils/format';
 import { dateUtils } from '../utils/dateUtils';
-import dynamic from 'next/dynamic';
-const LineChart = dynamic(() => import('@mui/x-charts').then(m => m.LineChart), { ssr: false });
+import { LineChart } from '@mui/x-charts/LineChart';
 import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useCategories } from '../utils/useCategories';
 import { TABLE_HEADER_CELL_STYLE, TABLE_BODY_CELL_STYLE, TABLE_ROW_HOVER_STYLE, TABLE_ROW_HOVER_BACKGROUND } from '../utils/tableStyles';
@@ -35,6 +35,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
   const [editPrice, setEditPrice] = React.useState<string>('');
   const [editCategory, setEditCategory] = React.useState<string>('');
+  const [editName, setEditName] = React.useState<string>('');
   const { categories: availableCategories } = useCategories();
 
   React.useEffect(() => {
@@ -77,7 +78,8 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
   const handleEditClick = (expense: Expense) => {
     setEditingExpense(expense);
     setEditPrice(Math.abs(expense.price).toString());
-    setEditCategory(expense.category || data.type);
+    setEditCategory(expense.category || (data.type === "Bank Transactions" ? 'Bank' : data.type));
+    setEditName(expense.name);
   };
 
   const handleSaveClick = async () => {
@@ -90,6 +92,9 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
           const updateData: any = { price: priceWithSign };
           if (editCategory !== editingExpense.category) {
             updateData.category = editCategory;
+          }
+          if (editName !== editingExpense.name) {
+            updateData.name = editName;
           }
 
           const response = await fetch(`/api/transactions/${editingExpense.identifier}|${editingExpense.vendor}`, {
@@ -104,7 +109,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
             // Update the local data
             const updatedData = data.data.map((item: Expense) => 
               item.identifier === editingExpense.identifier && item.vendor === editingExpense.vendor
-                ? { ...item, price: priceWithSign, category: editCategory }
+                ? { ...item, price: priceWithSign, category: editCategory, name: editName }
                 : item
             );
             
@@ -213,7 +218,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
   return (
     <Dialog 
       open={open} 
-      onClose={onClose}
+      onClose={() => {
+        if (!editingExpense) onClose();
+      }}
+      disableEscapeKeyDown={!!editingExpense}
       maxWidth="md"
       fullWidth
       PaperProps={{
@@ -312,212 +320,234 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
           background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
           backdropFilter: 'blur(10px)'
         }}>
-        <Table
-          onClick={handleTableClick}
-          sx={{ tableLayout: 'fixed' }}
-        >
-          <TableHead>
-            <TableRow>
-              <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '30%' }}>Description</TableCell>
-              <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '25%' }}>Category</TableCell>
-              <TableCell align="right" style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Amount</TableCell>
-              <TableCell style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Date</TableCell>
-              <TableCell align="center" style={{ ...TABLE_HEADER_CELL_STYLE, width: '15%' }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {Array.isArray(data.data) ? data.data.map((expense: Expense, index) => (
-              <TableRow 
-                key={index}
-                onClick={() => handleRowClick(expense)}
-                style={TABLE_ROW_HOVER_STYLE}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = TABLE_ROW_HOVER_BACKGROUND;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <TableCell style={TABLE_BODY_CELL_STYLE}>
-                  {expense.name}
-                </TableCell>
-                <TableCell style={TABLE_BODY_CELL_STYLE}>
-                  {editingExpense?.identifier === expense.identifier && 
-                   editingExpense?.vendor === expense.vendor ? (
-                    <Autocomplete
-                      value={editCategory}
-                      onChange={(event, newValue) => setEditCategory(newValue || '')}
-                      onInputChange={(event, newInputValue) => setEditCategory(newInputValue)}
-                      freeSolo
-                      options={availableCategories}
-                      size="small"
-                      sx={{
-                        minWidth: 120,
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': {
-                            borderColor: '#e2e8f0',
-                          },
-                          '&:hover fieldset': {
-                            borderColor: '#3b82f6',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#3b82f6',
-                          },
-                        },
-                      }}
-                      renderInput={(params) => (
+        <Box sx={{ width: '100%' }}>
+          {/* Table Header */}
+          <Box sx={{ 
+            display: 'flex', 
+            px: 3, 
+            py: 1.5, 
+            borderBottom: '1px solid #F1F5F9',
+            color: '#94A3B8',
+            fontSize: '11px',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            <Box sx={{ flex: 1.5 }}>Description</Box>
+            <Box sx={{ flex: 1 }}>Category</Box>
+            <Box sx={{ flex: 1, textAlign: 'right' }}>Amount</Box>
+            <Box sx={{ flex: 1, textAlign: 'center' }}>Date</Box>
+            <Box sx={{ width: '100px', textAlign: 'right' }}>Actions</Box>
+          </Box>
+
+          {/* Table Body */}
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            {Array.isArray(data.data) && data.data.length > 0 ? data.data.map((expense: Expense, index) => {
+              const isEditing = editingExpense?.identifier === expense.identifier && editingExpense?.vendor === expense.vendor;
+              
+              return (
+                <Box
+                  key={index}
+                  onClick={() => !isEditing && handleRowClick(expense)}
+                  onDoubleClick={() => !isEditing && handleEditClick(expense)}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    px: 3,
+                    py: isEditing ? 1.5 : 2,
+                    borderBottom: '1px solid #F8FAFC',
+                    transition: 'all 0.2s ease',
+                    cursor: isEditing ? 'default' : 'pointer',
+                    '&:hover': {
+                      background: '#F8FAFC',
+                    }
+                  }}
+                >
+                  {/* Description */}
+                  <Box sx={{ flex: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: '8px', 
+                      backgroundColor: '#F1F5F9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#64748B',
+                      flexShrink: 0
+                    }}>
+                      {expense.name.charAt(0).toUpperCase()}
+                    </Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                      {isEditing ? (
                         <TextField
-                          {...params}
-                          placeholder="Enter category..."
-                          sx={{
-                            '& .MuiInputBase-input': {
-                              fontSize: '14px',
-                              padding: '6px 10px',
-                            },
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          size="small"
+                          variant="standard"
+                          autoFocus
+                          InputProps={{ disableUnderline: true }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveClick();
+                            if (e.key === 'Escape') {
+                              e.stopPropagation();
+                              handleCancelClick();
+                            }
+                          }}
+                          sx={{ 
+                            '& .MuiInputBase-input': { 
+                              fontWeight: 600, 
+                              fontSize: '14px', 
+                              p: '4px 8px', 
+                              bgcolor: '#FFF', 
+                              borderRadius: '6px',
+                              border: '1px solid #E2E8F0'
+                            } 
                           }}
                         />
+                      ) : (
+                        <>
+                          <Typography sx={{ fontWeight: 600, fontSize: '14px', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {expense.name}
+                          </Typography>
+                          <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>{expense.vendor}</Typography>
+                        </>
                       )}
-                    />
-                  ) : (
-                    <span
-                      style={{
-                        cursor: 'pointer',
-                        padding: '4px 8px',
+                    </Box>
+                  </Box>
+
+                  {/* Category */}
+                  <Box sx={{ flex: 1 }}>
+                    {isEditing ? (
+                      <Autocomplete
+                        size="small"
+                        options={availableCategories}
+                        value={editCategory}
+                        onChange={(_, val) => setEditCategory(val || '')}
+                        freeSolo
+                        renderInput={(params) => (
+                          <TextField 
+                            {...params} 
+                            variant="standard" 
+                            InputProps={{ ...params.InputProps, disableUnderline: true }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveClick();
+                              if (e.key === 'Escape') {
+                                e.stopPropagation();
+                                handleCancelClick();
+                              }
+                            }}
+                            sx={{ 
+                              '& .MuiInputBase-input': { 
+                                fontSize: '11px', 
+                                fontWeight: 700,
+                                p: '4px 8px !important', 
+                                bgcolor: '#FFF', 
+                                borderRadius: '6px',
+                                border: '1px solid #E2E8F0',
+                                textTransform: 'uppercase'
+                              } 
+                            }}
+                          />
+                        )}
+                      />
+                    ) : (
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '4px 10px',
                         borderRadius: '6px',
-                        transition: 'all 0.2s ease-in-out',
-                        display: 'inline-block',
-                        minWidth: '60px',
-                        textAlign: 'center',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        color: '#3b82f6',
-                        fontWeight: '500',
-                        fontSize: '13px'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRowClick(expense);
-                        handleEditClick(expense);
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-                        e.currentTarget.style.transform = 'scale(1.02)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                    >
-                      {expense.category || data.type}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell align="right" style={{ 
-                  ...TABLE_BODY_CELL_STYLE,
-                  color: data.type === "Bank Transactions" 
-                    ? (expense.price >= 0 ? '#4ADE80' : '#F87171')
-                    : color,
-                  fontWeight: '600'
-                }}>
-                  {editingExpense?.identifier === expense.identifier && 
-                   editingExpense?.vendor === expense.vendor ? (
-                    <TextField
-                      value={editPrice}
-                      onChange={(e) => setEditPrice(e.target.value)}
-                      size="small"
-                      type="number"
-                      inputProps={{ 
-                        style: { 
-                          textAlign: 'right',
-                          color: data.type === "Bank Transactions" 
-                            ? (expense.price >= 0 ? '#4ADE80' : '#F87171')
-                            : color
-                        } 
-                      }}
-                      sx={{ 
-                        width: '100px',
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': {
-                            borderColor: data.type === "Bank Transactions" 
-                              ? (expense.price >= 0 ? '#4ADE80' : '#F87171')
-                              : color,
-                          },
-                        },
-                      }}
-                    />
-                  ) : (
-                    data.type === "Bank Transactions" 
-                      ? `${expense.price >= 0 ? '+' : ''}${getCurrencySymbol()}${formatNumber(Math.abs(expense.price))}`
-                      : `${getCurrencySymbol()}${formatNumber(Math.abs(expense.price))}`
-                  )}
-                </TableCell>
-                <TableCell style={TABLE_BODY_CELL_STYLE}>
-                  {dateUtils.formatDate(expense.date)}
-                </TableCell>
-                <TableCell align="center" style={TABLE_BODY_CELL_STYLE}>
-                  {editingExpense?.identifier === expense.identifier && 
-                   editingExpense?.vendor === expense.vendor ? (
-                    <>
-                      <IconButton 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSaveClick();
+                        background: 'rgba(99, 102, 241, 0.08)',
+                        color: '#6366F1',
+                        textTransform: 'uppercase'
+                      }}>{expense.category || data.type}</span>
+                    )}
+                  </Box>
+
+                  {/* Amount */}
+                  <Box sx={{ flex: 1, textAlign: 'right' }}>
+                    {isEditing ? (
+                      <TextField 
+                        size="small" 
+                        type="number" 
+                        value={editPrice} 
+                        onChange={e => setEditPrice(e.target.value)}
+                        variant="standard"
+                        InputProps={{ disableUnderline: true }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveClick();
+                          if (e.key === 'Escape') {
+                            e.stopPropagation();
+                            handleCancelClick();
+                          }
                         }}
-                        size="small"
-                        sx={{ color: '#4ADE80' }}
-                      >
-                        <CheckIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCancelClick();
-                        }}
-                        size="small"
-                        sx={{ color: '#ef4444' }}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    </>
-                  ) : (
-                    <>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRowClick(expense);
-                          handleEditClick(expense);
-                        }}
-                        size="small"
                         sx={{ 
-                          color: '#3b82f6',
-                          '&:hover': {
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                          },
+                          width: '100px',
+                          '& .MuiInputBase-input': { 
+                            fontWeight: 700, 
+                            fontSize: '15px', 
+                            p: '4px 8px', 
+                            bgcolor: '#FFF', 
+                            borderRadius: '6px',
+                            border: '1px solid #E2E8F0',
+                            textAlign: 'right',
+                            color: expense.price < 0 ? '#EF4444' : '#10B981'
+                          } 
                         }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTransaction(expense);
-                        }}
-                        size="small"
-                        sx={{ 
-                          color: '#ef4444',
-                          '&:hover': {
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                          },
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </>
-                  )}
-                </TableCell>
-              </TableRow>
-              )) : <TableRow><TableCell colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>No data available</TableCell></TableRow>}
-          </TableBody>
-        </Table>
+                      />
+                    ) : (
+                      <Typography sx={{ 
+                        fontWeight: 700, 
+                        fontSize: '15px',
+                        color: expense.price < 0 ? '#EF4444' : '#10B981'
+                      }}>
+                        {expense.price < 0 ? '-' : '+'}{getCurrencySymbol()}{formatNumber(Math.abs(expense.price))}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {/* Date */}
+                  <Box sx={{ flex: 1, textAlign: 'center' }}>
+                    <Typography sx={{ fontSize: '13px', color: '#94A3B8' }}>
+                      {dateUtils.formatDate(expense.date)}
+                    </Typography>
+                  </Box>
+
+                  {/* Actions */}
+                  <Box sx={{ width: '100px', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                    {isEditing ? (
+                      <>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleSaveClick(); }} sx={{ color: '#10B981' }}><CheckIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCancelClick(); }} sx={{ color: '#EF4444' }}><CloseIcon fontSize="small" /></IconButton>
+                      </>
+                    ) : (
+                      <>
+                        <IconButton 
+                          size="small" 
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(expense); }} 
+                          sx={{ color: '#3B82F6', '&:hover': { background: '#EFF6FF' } }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton 
+                          size="small" 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(expense); }} 
+                          sx={{ color: '#EF4444', '&:hover': { background: '#FEF2F2' } }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </>
+                    )}
+                  </Box>
+                </Box>
+              );
+            }) : (
+              <Box sx={{ p: 4, textAlign: 'center', color: '#94A3B8' }}>No data available</Box>
+            )}
+          </Box>
+        </Box>
         </Box>
       </DialogContent>
     </Dialog>

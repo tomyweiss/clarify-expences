@@ -8,8 +8,8 @@ const handler = createAuthenticatedApiHandler({
     if (!req.query.id) {
       return "ID parameter is required";
     }
-    if (req.method === 'PUT' && !req.body?.price && !req.body?.category) {
-      return "Either price or category is required for updates";
+    if (req.method === 'PUT' && !req.body?.price && !req.body?.category && !req.body?.name) {
+      return "Price, category, or name is required for updates";
     }
   },
   query: async (req) => {
@@ -40,6 +40,12 @@ const handler = createAuthenticatedApiHandler({
     if (req.body.category !== undefined) {
       updates.push(`category = $${paramIndex}`);
       params.push(req.body.category);
+      paramIndex++;
+    }
+
+    if (req.body.name !== undefined) {
+      updates.push(`name = $${paramIndex}`);
+      params.push(req.body.name);
       paramIndex++;
     }
 

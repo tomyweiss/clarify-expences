@@ -13,7 +13,7 @@ interface ModalHeaderProps {
 
 export default function ModalHeader({ title, onClose, actions }: ModalHeaderProps) {
   return (
-    <DialogTitle style={{ 
+    <DialogTitle component="div" style={{ 
       color: '#1e293b',
       display: 'flex',
       justifyContent: 'space-between',

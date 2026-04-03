@@ -203,3 +203,13 @@ a:hover {
   }
 }
 
+/* Forcefully hide Next.js Dev/Build Portals (the 'N' circle, Turbopack overlays, etc.) */
+nextjs-portal, 
+#nextjs-portal, 
+[data-nextjs-portal],
+#__next-build-watcher {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
