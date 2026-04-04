@@ -23,6 +23,7 @@ interface Transaction {
   category: string;
   identifier: string;
   vendor: string;
+  account_number?: string;
 }
 
 interface TransactionsTableProps {
@@ -64,7 +65,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
       {/* Header */}
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: '240px 140px 120px 100px 90px', 
+        gridTemplateColumns: '1fr 150px 120px 100px 90px', 
         px: 3, 
         pb: 1.5, 
         borderBottom: '1px solid rgba(229, 231, 235, 0.5)' 
@@ -87,7 +88,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
             key={tx.identifier}
             sx={{
               display: 'grid',
-              gridTemplateColumns: '240px 140px 120px 100px 90px',
+              gridTemplateColumns: '1fr 150px 120px 100px 90px',
               alignItems: 'center',
               px: 3,
               py: 1.5,
@@ -148,7 +149,26 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                     {tx.name}
                   </Typography>
                 )}
-                {!isEditing && <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>{tx.vendor}</Typography>}
+                {!isEditing && (
+                  <Typography sx={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {tx.vendor}
+                    {tx.account_number && (
+                      <>
+                        <span style={{ fontSize: '10px', opacity: 0.5 }}>•</span>
+                        <span style={{ 
+                          fontWeight: 600, 
+                          color: '#64748B',
+                          background: '#F1F5F9',
+                          padding: '0px 4px',
+                          borderRadius: '4px',
+                          fontSize: '10px'
+                        }}>
+                          {tx.account_number.slice(-4)}
+                        </span>
+                      </>
+                    )}
+                  </Typography>
+                )}
               </Box>
             </Box>
 

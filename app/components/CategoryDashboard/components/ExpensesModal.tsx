@@ -269,7 +269,15 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                 yAxis={[
                   {
                     tickLabelStyle: { fill: '#666' },
-                    valueFormatter: (value: number) => `${getCurrencySymbol()}${formatNumber(value)}`,
+                    valueFormatter: (value: number) => {
+                      if (Math.abs(value) >= 1000) {
+                        return `${getCurrencySymbol()}${new Intl.NumberFormat('en-US', {
+                          notation: 'compact',
+                          maximumFractionDigits: 1
+                        }).format(value)}`;
+                      }
+                      return `${getCurrencySymbol()}${formatNumber(value)}`;
+                    },
                   },
                 ]}
                 series={[
@@ -282,7 +290,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                   },
                 ]}
                 height={300}
-                margin={{ left: 70 }}
+                margin={{ left: 80 }}
                 grid={{ horizontal: true, vertical: false }}
                 sx={{
                   '.MuiLineElement-root': {
@@ -412,7 +420,24 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                           <Typography sx={{ fontWeight: 600, fontSize: '14px', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {expense.name}
                           </Typography>
-                          <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>{expense.vendor}</Typography>
+                          <Typography sx={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {expense.vendor}
+                            {expense.account_number && (
+                              <>
+                                <span style={{ fontSize: '10px', opacity: 0.5 }}>•</span>
+                                <span style={{ 
+                                  fontWeight: 600, 
+                                  color: '#64748B',
+                                  background: '#F1F5F9',
+                                  padding: '0px 4px',
+                                  borderRadius: '4px',
+                                  fontSize: '10px'
+                                }}>
+                                  {expense.account_number.slice(-4)}
+                                </span>
+                              </>
+                            )}
+                          </Typography>
                         </>
                       )}
                     </Box>

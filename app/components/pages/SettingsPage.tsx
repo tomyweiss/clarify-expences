@@ -120,6 +120,60 @@ const SettingsPage: React.FC = () => {
     event.target.value = '';
   };
 
+  const handleExportJSON = async () => {
+    try {
+      const response = await fetch('/api/settings/backup');
+      const data = await response.json();
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `clarify_full_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showNotification('Backup exported successfully', 'success');
+    } catch (err) {
+      showNotification('Export failed', 'error');
+    }
+  };
+
+  const handleImportJSON = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const backupData = JSON.parse(e.target?.result as string);
+        const response = await fetch('/api/settings/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ backupData }),
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+          const { stats } = result;
+          showNotification(
+            `Restore complete! Transactions: ${stats.transactions.imported} new, Rules: ${stats.rules.imported} new`,
+            'success'
+          );
+          window.dispatchEvent(new CustomEvent('dataRefresh'));
+        } else {
+          showNotification(result.message || 'Restore failed', 'error');
+        }
+      } catch (err) {
+        showNotification('Invalid backup file', 'error');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
   const statusColor = (status: string) => {
     if (status === 'success') return 'success';
     if (status === 'failed') return 'error';
@@ -235,19 +289,41 @@ const SettingsPage: React.FC = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Box sx={{ p: 3, borderRadius: '12px', background: '#fff', border: '1px solid #E5E7EB' }}>
               <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 600 }}>Backup & Import</h3>
-              <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6B7280' }}>Export or import your transaction data as CSV.</p>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button variant="outlined" fullWidth startIcon={<DownloadIcon />} onClick={handleExportCSV}
-                  sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#6366F1', color: '#6366F1', borderRadius: '8px' }}>
-                  Export CSV
-                </Button>
-                <input type="file" accept=".csv" id="import-csv-input" style={{ display: 'none' }} onChange={handleImportCSV} />
-                <label htmlFor="import-csv-input" style={{ flex: 1 }}>
-                  <Button component="span" variant="outlined" fullWidth startIcon={<UploadIcon />}
-                    sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#10B981', color: '#10B981', borderRadius: '8px', '&:hover': { backgroundColor: '#ECFDF5' } }}>
-                    Import CSV
+              
+              <Box sx={{ mb: 3 }}>
+                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', mb: 0.5 }}>Full App Backup (Recommended)</Typography>
+                <Typography sx={{ fontSize: '13px', color: '#6B7280', mb: 1.5 }}>Includes all transactions AND categorization rules.</Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button variant="contained" fullWidth startIcon={<DownloadIcon />} onClick={handleExportJSON}
+                    sx={{ textTransform: 'none', fontWeight: 600, backgroundColor: '#6366F1', borderRadius: '8px', boxShadow: 'none', '&:hover': { backgroundColor: '#4F46E5', boxShadow: 'none' } }}>
+                    Export JSON
                   </Button>
-                </label>
+                  <input type="file" accept=".json" id="import-json-input" style={{ display: 'none' }} onChange={handleImportJSON} />
+                  <label htmlFor="import-json-input" style={{ flex: 1 }}>
+                    <Button component="span" variant="outlined" fullWidth startIcon={<UploadIcon />}
+                      sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#6366F1', color: '#6366F1', borderRadius: '8px', '&:hover': { backgroundColor: '#EEF2FF', borderColor: '#4F46E5' } }}>
+                      Import JSON
+                    </Button>
+                  </label>
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', mb: 0.5 }}>Transaction-Only CSV</Typography>
+                <Typography sx={{ fontSize: '13px', color: '#6B7280', mb: 1.5 }}>Standard CSV format for Excel/Spreadsheets.</Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button variant="outlined" fullWidth startIcon={<DownloadIcon />} onClick={handleExportCSV}
+                    sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#94A3B8', color: '#475569', borderRadius: '8px', '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                    Export CSV
+                  </Button>
+                  <input type="file" accept=".csv" id="import-csv-input" style={{ display: 'none' }} onChange={handleImportCSV} />
+                  <label htmlFor="import-csv-input" style={{ flex: 1 }}>
+                    <Button component="span" variant="outlined" fullWidth startIcon={<UploadIcon />}
+                      sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#94A3B8', color: '#475569', borderRadius: '8px', '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                      Import CSV
+                    </Button>
+                  </label>
+                </Box>
               </Box>
             </Box>
 

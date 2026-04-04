@@ -67,7 +67,7 @@ async function performScrape(options, credentials, scraperCredentials, isBank) {
     let totalTransactions = 0;
     for (const account of result.accounts) {
       for (const txn of account.txns) {
-        await insertTransaction(txn, client, options.companyId, isBank);
+        await insertTransaction(txn, client, options.companyId, isBank, account.accountNumber);
         totalTransactions++;
       }
     }

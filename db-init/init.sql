@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 	status VARCHAR(20) NOT NULL,
 	installments_number INTEGER,
 	installments_total INTEGER,
+	account_number VARCHAR(100),
 	PRIMARY KEY (identifier, vendor)
 );
 

@@ -11,6 +11,7 @@ export interface Expense {
   category?: string;
   identifier?: string;
   vendor?: string;
+  account_number?: string;
 }
 
 export interface ExpensesModalProps {

@@ -285,7 +285,7 @@ async function performIsracardScrape(options, credentials) {
         try {
           const transactions = await scrapeCardMonth(page, month, year, cardSuffix, downloadDir);
           for (const txn of transactions) {
-            await insertTransaction(txn, client, 'isracard', false);
+            await insertTransaction(txn, client, 'isracard', false, cardSuffix);
             totalTransactions++;
           }
         } catch (err) { console.error(`Error card ${cardSuffix} ${month}.${year}:`, err.message); }

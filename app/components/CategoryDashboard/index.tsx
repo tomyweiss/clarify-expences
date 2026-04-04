@@ -9,7 +9,7 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import PaidIcon from '@mui/icons-material/Paid';
 import SavingsIcon from '@mui/icons-material/Savings';
 import SettingsIcon from '@mui/icons-material/Settings';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
+import RepeatIcon from '@mui/icons-material/Repeat';
 import CloseIcon from '@mui/icons-material/Close';
 import { 
   Typography, 
@@ -21,7 +21,12 @@ import {
   Paper,
   Dialog,
   DialogTitle,
-  DialogContent
+  DialogContent,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
+  FormControl,
 } from '@mui/material';
 import { ResponseData, Expense, ModalData } from './types';
 import { useCategoryIcons, useCategoryColors } from './utils/categoryUtils';
@@ -30,36 +35,57 @@ import ExpensesModal from './components/ExpensesModal';
 import TransactionsTable from './components/TransactionsTable';
 import RecurrentDashboard from '../RecurrentDashboard';
 
-// Common styles
-const BUTTON_STYLE = {
+// Unified Control Strip styles
+const STRIP_CONTAINER_STYLE = {
+  display: 'flex',
+  alignItems: 'center',
   background: '#FFFFFF',
-  padding: '10px 14px',
-  borderRadius: '8px',
-  border: '1px solid #E5E7EB',
-  color: '#4B5563',
-  transition: 'all 0.2s ease-in-out',
-  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+  borderRadius: '14px',
+  padding: '4px',
+  border: '1px solid #E2E8F0',
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 6px -1px rgba(0, 0, 0, 0.02)',
+  gap: '4px'
 };
 
-const HOVER_BUTTON_STYLE = {
-  background: '#F3F4F6',
-  color: '#111827'
-};
-
-const SELECT_STYLE = {
-  padding: '10px 24px',
-  borderRadius: '8px',
-  border: '1px solid #E5E7EB',
-  background: '#FFFFFF',
-  color: '#111827',
+const STRIP_ITEM_STYLE = {
+  height: '40px',
+  borderRadius: '10px',
+  border: 'none',
+  background: 'transparent',
+  color: '#475569',
   fontSize: '14px',
-  fontWeight: '500',
+  fontWeight: '600',
+  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   cursor: 'pointer',
+  padding: '0 12px',
+  display: 'flex',
+  alignItems: 'center',
   outline: 'none',
+  '&:hover': {
+    background: '#F8FAFC',
+    color: '#1E293B'
+  }
+};
+
+const STRIP_DIVIDER_STYLE = {
+  width: '1px',
+  height: '20px',
+  background: '#E2E8F0',
+  margin: '0 6px'
+};
+
+const SELECT_STRIP_STYLE = {
+  ...STRIP_ITEM_STYLE,
+  appearance: 'none' as const,
+  paddingRight: '32px',
+  paddingLeft: '12px',
   textAlign: 'right' as const,
   direction: 'rtl' as const,
-  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-  transition: 'all 0.2s ease-in-out'
+  position: 'relative' as const,
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'left 8px center',
+  backgroundSize: '14px',
 };
 
 // Helper function to fetch all transactions for a month
@@ -81,24 +107,25 @@ const fetchAllTransactions = async (month: string) => {
 };
 
 const CategoryDashboard: React.FC = () => {
-  const [sumPerCategory, setSumPerCategory] = React.useState<ResponseData[]>([]);
+  const [allTransactionsForMonth, setAllTransactionsForMonth] = React.useState<any[]>([]);
+  const [loadingData, setLoadingData] = React.useState(false);
+  const [cardFilter, setCardFilter] = React.useState<string[]>([]);
+  const categoryIcons = useCategoryIcons();
+  const categoryColors = useCategoryColors();
+  const [allAvailableDates, setAllAvailableDates] = React.useState<string[]>([]);
+  const [availableCards, setAvailableCards] = React.useState<string[]>([]);
+
+  // Add missing state back
   const [selectedYear, setSelectedYear] = React.useState<string>("");
   const [selectedMonth, setSelectedMonth] = React.useState<string>("");
   const [uniqueYears, setUniqueYears] = React.useState<string[]>([]);
   const [uniqueMonths, setUniqueMonths] = React.useState<string[]>([]);
-  const [bankTransactions, setBankTransactions] = React.useState({ income: 0, expenses: 0 });
-  const [creditCardTransactions, setCreditCardTransactions] = React.useState(0);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [loadingCategory, setLoadingCategory] = React.useState<string | null>(null);
   const [loadingBankTransactions, setLoadingBankTransactions] = React.useState(false);
   const [modalData, setModalData] = React.useState<ModalData>();
   const [showTransactionsTable, setShowTransactionsTable] = React.useState(false);
-  const [transactions, setTransactions] = React.useState<any[]>([]);
-  const [loadingTransactions, setLoadingTransactions] = React.useState(false);
   const [recurrentModalOpen, setRecurrentModalOpen] = React.useState(false);
-  const categoryIcons = useCategoryIcons();
-  const categoryColors = useCategoryColors();
-  const [allAvailableDates, setAllAvailableDates] = React.useState<string[]>([]);
 
   // Use refs to store current values for the event listener
   const currentYearRef = React.useRef(selectedYear);
@@ -147,9 +174,7 @@ const CategoryDashboard: React.FC = () => {
   }, [handleDataRefresh]);
 
   React.useEffect(() => {
-    if (showTransactionsTable) {
-      fetchTransactions();
-    }
+    // No need to fetchTransactions separately anymore as allData is already synced
   }, [selectedYear, selectedMonth]);
 
   const getAvailableMonths = async () => {
@@ -224,50 +249,76 @@ const CategoryDashboard: React.FC = () => {
 
 
   const fetchData = async (month: string) => {
+    setLoadingData(true);
     try {
-      const url = new URL("/api/month_by_categories", window.location.origin);
-      url.searchParams.append("month", month);
-
-      const response = await fetch(url.toString(), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setSumPerCategory(data);
-      
-      // Fetch all transactions to calculate income and expenses properly
+      // Single source of truth: Fetch all transactions (including recurrent)
       const allTransactions = await fetchAllTransactions(month);
+      setAllTransactionsForMonth(allTransactions);
+
+      // Extract unique cards for the month as "Vendor (Digits)"
+      const cardLabels = Array.from(new Set(allTransactions
+        .filter((tx: any) => tx.account_number && tx.account_number.trim() !== '')
+        .map((tx: any) => `${tx.vendor || 'Unknown'} (${tx.account_number})`)
+      )) as string[];
+      setAvailableCards(cardLabels.sort());
       
-      // Calculate total income: Bank category with positive values
-      const totalIncome = allTransactions
-        .filter((transaction: any) => transaction.category === 'Bank' && transaction.price > 0)
-        .reduce((acc: number, transaction: any) => acc + transaction.price, 0);
-      
-      // Calculate total expenses: All negative values
-      const totalExpenses = allTransactions
-        .filter((transaction: any) => transaction.category === 'Bank' && transaction.price < 0)
-        .reduce((acc: number, transaction: any) => acc + Math.abs(transaction.price), 0);
-      
-      // Calculate credit card expenses: All transactions excluding Bank and Income categories
-      const creditCardExpenses = allTransactions
-        .filter((transaction: any) => transaction.category !== 'Bank' && transaction.category !== 'Income')
-        .reduce((acc: number, transaction: any) => acc + Math.abs(transaction.price), 0);
-      
-      setBankTransactions({ income: totalIncome, expenses: totalExpenses });
-      setCreditCardTransactions(creditCardExpenses);
+      // Clear filters not available in current month
+      setCardFilter(prev => prev.filter(c => cardLabels.includes(c)));
+
     } catch (error) {
       console.error("Error fetching data:", error);
-      // Reset states in case of error
-      setSumPerCategory([]);
-      setBankTransactions({ income: 0, expenses: 0 });
-      setCreditCardTransactions(0);
+      setAllTransactionsForMonth([]);
+    } finally {
+      setLoadingData(false);
     }
   };
+
+  // Derive all dashboard metrics client-side from the single source of truth
+  const filteredTransactions = React.useMemo(() => {
+    return allTransactionsForMonth.filter(tx => 
+      cardFilter.length === 0 || 
+      (tx.account_number && cardFilter.includes(`${tx.vendor || 'Unknown'} (${tx.account_number})`))
+    );
+  }, [allTransactionsForMonth, cardFilter]);
+
+  const sumPerCategory = React.useMemo(() => {
+    const groups: Record<string, number> = {};
+    filteredTransactions
+      .filter(tx => tx.category !== 'Bank' && tx.category !== 'Income')
+      .forEach(tx => {
+        const cat = tx.category || 'Uncategorized';
+        groups[cat] = (groups[cat] || 0) + Math.abs(tx.price);
+      });
+    
+    return Object.entries(groups)
+      .map(([name, value]) => ({ name, value: Math.round(value) }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredTransactions]);
+
+  const { bankTransactions, creditCardTransactions } = React.useMemo(() => {
+    // Calculate total income: Bank category with positive values
+    const income = filteredTransactions
+      .filter((tx: any) => tx.category === 'Bank' && tx.price > 0)
+      .reduce((acc: number, tx: any) => acc + tx.price, 0);
+    
+    // Calculate total bank expenses: Bank category with negative values
+    const bankExpenses = filteredTransactions
+      .filter((tx: any) => tx.category === 'Bank' && tx.price < 0)
+      .reduce((acc: number, tx: any) => acc + Math.abs(tx.price), 0);
+    
+    // Calculate credit card expenses: All transactions excluding Bank and Income categories
+    const cardExpenses = filteredTransactions
+      .filter((tx: any) => tx.category !== 'Bank' && tx.category !== 'Income')
+      .reduce((acc: number, tx: any) => acc + Math.abs(tx.price), 0);
+
+    return {
+      bankTransactions: { income, expenses: bankExpenses },
+      creditCardTransactions: cardExpenses
+    };
+  }, [filteredTransactions]);
+  
+  const transactions = filteredTransactions; // Alias for the table
+  const loadingTransactions = loadingData; // Alias for the table loading
   
   const categories = sumPerCategory
     .map((item) => {
@@ -300,7 +351,8 @@ const CategoryDashboard: React.FC = () => {
           date: transaction.date,
           category: transaction.category,
           identifier: transaction.identifier,
-          vendor: transaction.vendor
+          vendor: transaction.vendor,
+          account_number: transaction.account_number
         }))
       });
       
@@ -332,7 +384,8 @@ const CategoryDashboard: React.FC = () => {
           date: transaction.date,
           category: transaction.category,
           identifier: transaction.identifier,
-          vendor: transaction.vendor
+          vendor: transaction.vendor,
+          account_number: transaction.account_number
         }))
       });
 
@@ -377,26 +430,11 @@ const CategoryDashboard: React.FC = () => {
   };
 
   const handleTransactionsTableClick = async () => {
-    const newShowTransactionsTable = !showTransactionsTable;
-    setShowTransactionsTable(newShowTransactionsTable);
-    if (!newShowTransactionsTable){
-      return;
-    }
-
-    fetchTransactions();
+    setShowTransactionsTable(!showTransactionsTable);
   };
 
   const fetchTransactions = async () => {
-    setLoadingTransactions(true);
-    try {
-      const fullMonth = `${selectedYear}-${selectedMonth}`;
-      const transactionsData = await fetchAllTransactions(fullMonth);
-      setTransactions(transactionsData);
-    } catch (error) {
-      console.error("Error fetching transactions data:", error);
-    } finally {
-      setLoadingTransactions(false);
-    }
+    // This is now handled by fetchData which syncs allTransactionsForMonth
   };
 
   const handleDeleteTransaction = async (transaction: any) => {
@@ -406,11 +444,7 @@ const CategoryDashboard: React.FC = () => {
       });
       
       if (response.ok) {
-        // Remove the transaction from the local state
-        setTransactions(transactions.filter(t => 
-          t.identifier !== transaction.identifier || t.vendor !== transaction.vendor
-        ));
-        // Refresh the data to update the metrics
+        // Refresh the data to update the metrics and table
         fetchData(`${selectedYear}-${selectedMonth}`);
       } else {
         throw new Error('Failed to delete transaction');
@@ -439,13 +473,7 @@ const CategoryDashboard: React.FC = () => {
       });
       
       if (response.ok) {
-        // Update the transaction in the local state
-        setTransactions(transactions.map(t => 
-          t.identifier === transaction.identifier && t.vendor === transaction.vendor
-            ? { ...t, price: newPrice, ...(newCategory !== undefined && { category: newCategory }), ...(newName !== undefined && { name: newName }) }
-            : t
-        ));
-        // Refresh the data to update the metrics
+        // Refresh the data to update the metrics and table
         fetchData(`${selectedYear}-${selectedMonth}`);
       } else {
         throw new Error('Failed to update transaction');
@@ -466,7 +494,7 @@ const CategoryDashboard: React.FC = () => {
       {/* Main content container */}
       <div style={{ 
         padding: '32px 40px',
-        maxWidth: '1100px',
+        maxWidth: '1400px',
         margin: '0 auto',
         position: 'relative',
         zIndex: 1
@@ -569,78 +597,171 @@ const CategoryDashboard: React.FC = () => {
                 gap: '16px',
                 alignItems: 'center'
               }}>
-                <Tooltip title={showTransactionsTable ? "Hide Transactions Table" : "Show Transactions Table"} arrow>
-                  <IconButton
-                    onClick={handleTransactionsTableClick}
-                    disableRipple
-                    disableFocusRipple
-                    sx={{
-                      ...BUTTON_STYLE,
-                      bgcolor: showTransactionsTable ? '#6366F1 !important' : '#FFFFFF !important',
-                      borderColor: showTransactionsTable ? '#6366F1' : '#E5E7EB',
-                      color: showTransactionsTable ? '#FFFFFF' : '#4B5563',
-                      '&:hover': {
-                         bgcolor: showTransactionsTable ? '#4F46E5 !important' : '#F3F4F6 !important',
-                         color: showTransactionsTable ? '#FFFFFF' : '#111827'
-                      },
-                      '&:focus, &:focus-visible, &.Mui-focusVisible': {
-                        outline: 'none !important',
-                        bgcolor: showTransactionsTable ? '#6366F1 !important' : '#FFFFFF !important',
-                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-                      }
-                    }}
-                  >
-                    <TableChartIcon />
-                  </IconButton>
-                </Tooltip>
+              <div style={STRIP_CONTAINER_STYLE}>
+                {/* View Actions Group (Table / Repeat) */}
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <Tooltip title={showTransactionsTable ? "Hide Transactions Table" : "Show Transactions Table"} arrow>
+                    <IconButton
+                      onClick={handleTransactionsTableClick}
+                      disableRipple
+                      sx={{
+                        ...STRIP_ITEM_STYLE,
+                        width: '40px',
+                        padding: 0,
+                        bgcolor: showTransactionsTable ? '#6366F1 !important' : 'transparent',
+                        color: showTransactionsTable ? '#FFFFFF !important' : '#475569',
+                        '&:hover': {
+                          bgcolor: showTransactionsTable ? '#4F46E5 !important' : '#F1F5F9'
+                        }
+                      }}
+                    >
+                      <TableChartIcon sx={{ fontSize: '20px' }} />
+                    </IconButton>
+                  </Tooltip>
 
-                <Tooltip title="Recurrent Transactions" arrow>
-                  <IconButton
-                    onClick={() => setRecurrentModalOpen(true)}
-                    disableRipple
-                    disableFocusRipple
-                    sx={{ 
-                      ...BUTTON_STYLE,
-                      bgcolor: '#FFFFFF !important',
-                      '&:hover': {
-                        bgcolor: '#F3F4F6 !important',
-                        color: '#111827'
+                  <Tooltip title="Recurrent Transactions" arrow>
+                    <IconButton
+                      onClick={() => setRecurrentModalOpen(true)}
+                      disableRipple
+                      sx={{ 
+                        ...STRIP_ITEM_STYLE,
+                        width: '40px',
+                        padding: 0,
+                        '&:hover': { bgcolor: '#F1F5F9' }
+                      }}
+                    >
+                      <RepeatIcon sx={{ fontSize: '20px' }} />
+                    </IconButton>
+                  </Tooltip>
+                </div>
+
+                <div style={STRIP_DIVIDER_STYLE} />
+
+                {/* Search / Filter Group (Card Dropdown) */}
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <CreditCardIcon sx={{ 
+                    position: 'absolute', 
+                    left: '12px', 
+                    zIndex: 1,
+                    fontSize: '18px', 
+                    color: cardFilter.length > 0 ? '#6366F1' : '#94A3B8',
+                    transition: 'color 0.2s',
+                    pointerEvents: 'none'
+                  }} />
+                  
+                  <Select
+                    multiple
+                    displayEmpty
+                    value={cardFilter}
+                    onChange={(e) => setCardFilter(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                    renderValue={(selected) => {
+                      if (selected.length === 0) {
+                        return <span style={{ color: '#94A3B8', fontWeight: 500 }}>Cards</span>;
+                      }
+                      if (selected.length === 1) {
+                        return <span style={{ color: '#111827', fontWeight: 700, fontSize: '13px' }}>{selected[0]}</span>;
+                      }
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ color: '#111827', fontWeight: 700 }}>{selected.length}</span>
+                          <span style={{ color: '#64748B', fontSize: '12px' }}>Cards</span>
+                        </div>
+                      );
+                    }}
+                    sx={{
+                      ...STRIP_ITEM_STYLE,
+                      paddingLeft: '38px',
+                      paddingRight: cardFilter.length > 0 ? '30px' : '32px',
+                      width: '180px',
+                      '& .MuiSelect-select': {
+                        padding: 0,
+                        paddingRight: '0 !important',
+                        display: 'flex',
+                        alignItems: 'center'
                       },
-                      '&:focus, &:focus-visible, &.Mui-focusVisible': {
-                        outline: 'none !important',
-                        bgcolor: '#FFFFFF !important'
+                      '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                      '& .MuiSvgIcon-root': { 
+                        fontSize: '18px', 
+                        right: cardFilter.length > 0 ? '24px' : '8px',
+                        color: '#94A3B8'
+                      },
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          mt: 1,
+                          borderRadius: '12px',
+                          border: '1px solid #E2E8F0',
+                          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            py: 1,
+                            '&.Mui-selected': { bgcolor: '#F1F5F9' },
+                            '&:hover': { bgcolor: '#F8FAFC' }
+                          }
+                        }
                       }
                     }}
                   >
-                    <AutorenewIcon />
-                  </IconButton>
-                </Tooltip>
-                <select 
-                  value={selectedYear}
-                  onChange={handleYearChange}
-                  style={{ ...SELECT_STYLE, minWidth: '120px' }}
-                  onMouseEnter={(e) => Object.assign(e.currentTarget.style, { background: '#F3F4F6' })}
-                  onMouseLeave={(e) => Object.assign(e.currentTarget.style, { background: '#FFFFFF' })}
-                >
-                  {uniqueYears.map((year) => (
-                    <option key={year} value={year} style={{ background: '#ffffff', color: '#1e293b' }}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-                <select 
-                  value={selectedMonth}
-                  onChange={handleMonthChange}
-                  style={{ ...SELECT_STYLE, minWidth: '160px' }}
-                  onMouseEnter={(e) => Object.assign(e.currentTarget.style, { background: '#F3F4F6' })}
-                  onMouseLeave={(e) => Object.assign(e.currentTarget.style, { background: '#FFFFFF' })}
-                >
-                  {uniqueMonths.map((month) => (
-                    <option key={month} value={month} style={{ background: '#ffffff', color: '#1e293b' }}>
-                      {new Date(`2024-${month}-01`).toLocaleDateString('default', { month: 'long' })}
-                    </option>
-                  ))}
-                </select>
+                    {availableCards.length === 0 ? (
+                      <MenuItem disabled value="">
+                        <Typography variant="body2" sx={{ color: '#94A3B8' }}>No cards found</Typography>
+                      </MenuItem>
+                    ) : (
+                      availableCards.map((card) => (
+                        <MenuItem key={card} value={card}>
+                          <Checkbox checked={cardFilter.includes(card)} size="small" sx={{ color: '#E2E8F0', '&.Mui-checked': { color: '#6366F1' } }} />
+                          <ListItemText primary={card} />
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+
+                  {cardFilter.length > 0 && (
+                    <IconButton
+                      onClick={() => setCardFilter([])}
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        right: '6px',
+                        padding: '4px',
+                        zIndex: 2,
+                        color: '#94A3B8',
+                        '&:hover': { color: '#64748B' }
+                      }}
+                    >
+                      <CloseIcon sx={{ fontSize: '14px' }} />
+                    </IconButton>
+                  )}
+                </div>
+
+                <div style={STRIP_DIVIDER_STYLE} />
+
+                {/* Time Selection Group (Date Picker) */}
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <select 
+                    value={selectedYear}
+                    onChange={handleYearChange}
+                    style={{ ...SELECT_STRIP_STYLE, minWidth: '85px' }}
+                  >
+                    {uniqueYears.map((year) => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                  <select 
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
+                    style={{ ...SELECT_STRIP_STYLE, minWidth: '110px' }}
+                  >
+                    {uniqueMonths.map((month) => (
+                      <option key={month} value={month}>
+                        {new Date(`2024-${month}-01`).toLocaleDateString('default', { month: 'short' })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               </div>
             </div>
           </div>
