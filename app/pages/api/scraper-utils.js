@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-export async function insertTransaction(txn, client, companyId, isBank) {
+export async function insertTransaction(txn, client, companyId, isBank, accountNumber) {
   const uniqueId = `${txn.identifier}-${companyId}-${txn.processedDate}-${txn.description}`;
   const hash = crypto.createHash('sha1');
   hash.update(uniqueId);
@@ -44,8 +44,9 @@ export async function insertTransaction(txn, client, companyId, isBank) {
         memo,
         status,
         installments_number,
-        installments_total
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        installments_total,
+        account_number
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       ON CONFLICT (identifier, vendor) DO NOTHING`,
       [
         txn.identifier,
@@ -62,7 +63,8 @@ export async function insertTransaction(txn, client, companyId, isBank) {
         txn.memo,
         txn.status,
         txn.installments?.number,
-        txn.installments?.total
+        txn.installments?.total,
+        accountNumber
       ]
     );
   } catch (error) {

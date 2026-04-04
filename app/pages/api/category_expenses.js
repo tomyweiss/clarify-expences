@@ -12,15 +12,15 @@ const handler = createApiHandler({
     if (all === "true") {
       return {
         sql: `
-          SELECT name, price, date, category, identifier, vendor
+          SELECT name, price, date, category, identifier, vendor, account_number
           FROM (
-            SELECT name, price, date, category, identifier, vendor
+            SELECT name, price, date, category, identifier, vendor, account_number
             FROM transactions 
             WHERE TO_CHAR(date, 'YYYY-MM') = $1
             
             UNION ALL
             
-            SELECT name, amount AS price, ($1 || '-01')::DATE AS date, category, 'recurrent-' || id AS identifier, 'recurrent' AS vendor
+            SELECT name, amount AS price, ($1 || '-01')::DATE AS date, category, 'recurrent-' || id AS identifier, 'recurrent' AS vendor, NULL AS account_number
             FROM recurrent_transactions
             WHERE (start_date <= ($1 || '-01')::DATE + INTERVAL '1 month' - INTERVAL '1 day')
             AND (end_date IS NULL OR end_date >= ($1 || '-01')::DATE)
@@ -34,16 +34,16 @@ const handler = createApiHandler({
     
     return {
       sql: `
-        SELECT name, price, date, category, identifier, vendor
+        SELECT name, price, date, category, identifier, vendor, account_number
         FROM (
-          SELECT name, price, date, category, identifier, vendor
+          SELECT name, price, date, category, identifier, vendor, account_number
           FROM transactions 
           WHERE TO_CHAR(date, 'YYYY-MM') = $1 
           AND category = $2
           
           UNION ALL
           
-          SELECT name, amount AS price, ($1 || '-01')::DATE AS date, category, 'recurrent-' || id AS identifier, 'recurrent' AS vendor
+          SELECT name, amount AS price, ($1 || '-01')::DATE AS date, category, 'recurrent-' || id AS identifier, 'recurrent' AS vendor, NULL AS account_number
           FROM recurrent_transactions
           WHERE category = $2
           AND (start_date <= ($1 || '-01')::DATE + INTERVAL '1 month' - INTERVAL '1 day')
