@@ -33,9 +33,7 @@ const Card: React.FC<CardProps> = ({
   layout = 'stacked'
 }) => {
   const isLarge = size === 'large';
-  const iconSize = isLarge ? 32 : 24;
-  const valueSize = isLarge ? '32px' : '26px';
-  const iconPadding = isLarge ? '16px' : '12px';
+  const iconSize = isLarge ? 28 : 22;
 
   return (
     <div 
@@ -83,7 +81,7 @@ const Card: React.FC<CardProps> = ({
         <h3 style={{ 
           margin: 0, 
           color: '#94A3B8', 
-          fontSize: '15px', 
+          fontSize: '13px', 
           fontWeight: '700', 
           textTransform: 'uppercase', 
           letterSpacing: '0.05em',
@@ -91,13 +89,13 @@ const Card: React.FC<CardProps> = ({
         }}>
           {title}
         </h3>
-        <Icon sx={{ fontSize: '32px', color: color, opacity: 0.75 }} />
+        <Icon sx={{ fontSize: `${iconSize}px`, color: color, opacity: 0.75 }} />
       </div>
 
       {/* Hero Value - Sharp & Established */}
       <div style={{ marginBottom: secondaryValue !== undefined ? '12px' : '0' }}>
         <span style={{ 
-          fontSize: isLarge ? '32px' : '28px', 
+          fontSize: isLarge ? '28px' : '24px', 
           fontWeight: '800', 
           color: '#334155', 
           letterSpacing: '-0.04em', 
@@ -117,7 +115,7 @@ const Card: React.FC<CardProps> = ({
           gap: '6px',
         }}>
           <Typography sx={{ 
-            fontSize: '12px', 
+            fontSize: '11px', 
             fontWeight: '600', 
             color: '#BDBEC6',
             fontFamily: "'Inter', sans-serif"

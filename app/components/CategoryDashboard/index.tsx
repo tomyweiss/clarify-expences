@@ -48,12 +48,12 @@ const STRIP_CONTAINER_STYLE = {
 };
 
 const STRIP_ITEM_STYLE = {
-  height: '40px',
+  height: '36px',
   borderRadius: '10px',
   border: 'none',
   background: 'transparent',
   color: '#475569',
-  fontSize: '14px',
+  fontSize: '13px',
   fontWeight: '600',
   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   cursor: 'pointer',
@@ -85,7 +85,7 @@ const SELECT_STRIP_STYLE = {
   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'left 8px center',
-  backgroundSize: '14px',
+  backgroundSize: '13px',
 };
 
 // Helper function to fetch all transactions for a month
@@ -138,8 +138,7 @@ const CategoryDashboard: React.FC = () => {
   }, [selectedYear, selectedMonth]);
 
   const handleDataRefresh = React.useCallback(() => {
-    // Re-fetch all available months and refresh the current view
-    getAvailableMonths();
+    getAvailableMonths(currentYearRef.current, currentMonthRef.current);
   }, []);
 
   React.useEffect(() => {
@@ -177,7 +176,7 @@ const CategoryDashboard: React.FC = () => {
     // No need to fetchTransactions separately anymore as allData is already synced
   }, [selectedYear, selectedMonth]);
 
-  const getAvailableMonths = async () => {
+  const getAvailableMonths = async (preserveYear?: string, preserveMonth?: string) => {
     try {
       const response = await fetch("/api/available_months");
       const transactionsData = await response.json();
@@ -195,26 +194,27 @@ const CategoryDashboard: React.FC = () => {
       }
 
       const lastDate = sortedDates[0];
-      
-      const years = Array.from(new Set(transactionsData.map((date: string) => date.substring(0, 4)))) as string[];
       const lastYear = lastDate.substring(0, 4);
-      
-      setUniqueYears(years);
-      setSelectedYear(lastYear);
-
-      // Get months for the last year
-      const monthsForLastYear = transactionsData
-        .filter((date: string) => date.startsWith(lastYear))
-        .map((date: string) => date.substring(5, 7));
-      
-      const months = Array.from(new Set(monthsForLastYear)) as string[];
       const lastMonth = lastDate.substring(5, 7);
       
-      setUniqueMonths(months);
-      setSelectedMonth(lastMonth);
+      const years = Array.from(new Set(transactionsData.map((date: string) => date.substring(0, 4)))) as string[];
+      setUniqueYears(years);
 
-      // Fetch data for initial selection
-      fetchData(`${lastYear}-${lastMonth}`);
+      // Keep the user's current selection if it still exists in the data, otherwise fall back to most recent
+      const yearToSelect = preserveYear && years.includes(preserveYear) ? preserveYear : lastYear;
+      setSelectedYear(yearToSelect);
+
+      const monthsForYear = transactionsData
+        .filter((date: string) => date.startsWith(yearToSelect))
+        .map((date: string) => date.substring(5, 7));
+      
+      const months = Array.from(new Set(monthsForYear)) as string[];
+      const monthToSelect = preserveMonth && months.includes(preserveMonth) ? preserveMonth : lastMonth;
+
+      setUniqueMonths(months);
+      setSelectedMonth(monthToSelect);
+
+      fetchData(`${yearToSelect}-${monthToSelect}`);
     } catch (error) {
       console.error("Error:", error);
     }
@@ -369,16 +369,19 @@ const CategoryDashboard: React.FC = () => {
     try {
       const fullMonth = `${selectedYear}-${selectedMonth}`;
       const allExpensesData = await fetchAllTransactions(fullMonth);
-      
-      // Filter out 'Bank' and 'Income' category transactions to get credit card expenses
-      const creditCardData = allExpensesData.filter((transaction: any) => 
-        transaction.category !== 'Bank' && transaction.category !== 'Income'
-      );
-      
+
+      // Match the "Total Expenses" card: non-Income spending including bank debits
+      // (card = non-Bank/non-Income amounts + Bank outflows where price < 0)
+      const totalExpenseRows = allExpensesData.filter((transaction: any) => {
+        if (transaction.category === 'Income') return false;
+        if (transaction.category === 'Bank') return transaction.price < 0;
+        return true;
+      });
+
       // Format the data correctly - include identifier and vendor for editing/deleting
       setModalData({
-        type: "Credit Card Expenses",
-        data: creditCardData.map((transaction: any) => ({
+        type: "Total Expenses",
+        data: totalExpenseRows.map((transaction: any) => ({
           name: transaction.name,
           price: transaction.price,
           date: transaction.date,
@@ -398,32 +401,39 @@ const CategoryDashboard: React.FC = () => {
   };
 
   const handleCategoryClick = async (category: string) => {
+    setLoadingCategory(category);
     try {
-      setLoadingCategory(category);
-      const url = new URL("/api/category_expenses", window.location.origin);
-      const params = new URLSearchParams();
-      const fullMonth = `${selectedYear}-${selectedMonth}`;
-      params.append("month", fullMonth);
-      params.append("category", category);
-      url.search = params.toString();
-
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
+      // Use the same source as the tiles (respects card filter) instead of a category-only API fetch
+      const rows = filteredTransactions
+        .filter((tx: any) => {
+          if (tx.category === 'Bank' || tx.category === 'Income') return false;
+          const cat = tx.category || 'Uncategorized';
+          return cat === category;
+        })
+        .slice()
+        .sort((a: any, b: any) => {
+          const ta = new Date(a.date).getTime();
+          const tb = new Date(b.date).getTime();
+          return tb - ta;
+        })
+        .map((transaction: any) => ({
+          name: transaction.name,
+          price: transaction.price,
+          date: transaction.date,
+          category: transaction.category,
+          identifier: transaction.identifier,
+          vendor: transaction.vendor,
+          account_number: transaction.account_number
+        }));
 
       setModalData({
         type: category,
-        data: data,
+        data: rows,
       });
 
       setIsModalOpen(true);
     } catch (error) {
-      console.error("Error fetching category expenses:", error);
+      console.error("Error opening category expenses:", error);
     } finally {
       setLoadingCategory(null);
     }
@@ -488,7 +498,8 @@ const CategoryDashboard: React.FC = () => {
       minHeight: '100vh',
       position: 'relative',
       background: '#F5F5F5',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      fontSize: '14px'
     }}>
       
       {/* Main content container */}
@@ -536,11 +547,12 @@ const CategoryDashboard: React.FC = () => {
                 fontFamily: "'Outfit', sans-serif", 
                 color: '#1E293B',
                 mb: 1,
-                letterSpacing: '-0.02em'
+                letterSpacing: '-0.02em',
+                fontSize: '1.5rem'
               }}>
                 Welcome to Finance
               </Typography>
-              <Typography sx={{ color: '#64748B', maxWidth: '450px', mx: 'auto', lineHeight: 1.6, fontSize: '16px' }}>
+              <Typography sx={{ color: '#64748B', maxWidth: '450px', mx: 'auto', lineHeight: 1.6, fontSize: '14px' }}>
                 Go to the <strong>Management</strong> tab to connect your bank accounts or upload transactions and start tracking your income and expenses.
               </Typography>
             </Box>
@@ -557,7 +569,7 @@ const CategoryDashboard: React.FC = () => {
                   py: 1.5,
                   textTransform: 'none',
                   fontWeight: 700,
-                  fontSize: '16px'
+                  fontSize: '14px'
                 }}
               >
                 Go to Management
@@ -586,7 +598,7 @@ const CategoryDashboard: React.FC = () => {
             }}>
               <div>
                 <h1 style={{
-                  fontSize: '24px',
+                  fontSize: '20px',
                   fontWeight: 700,
                   margin: 0,
                   color: '#111827'
@@ -606,7 +618,7 @@ const CategoryDashboard: React.FC = () => {
                       disableRipple
                       sx={{
                         ...STRIP_ITEM_STYLE,
-                        width: '40px',
+                        width: '36px',
                         padding: 0,
                         bgcolor: showTransactionsTable ? '#6366F1 !important' : 'transparent',
                         color: showTransactionsTable ? '#FFFFFF !important' : '#475569',
@@ -615,7 +627,7 @@ const CategoryDashboard: React.FC = () => {
                         }
                       }}
                     >
-                      <TableChartIcon sx={{ fontSize: '20px' }} />
+                      <TableChartIcon sx={{ fontSize: '18px' }} />
                     </IconButton>
                   </Tooltip>
 
@@ -625,12 +637,12 @@ const CategoryDashboard: React.FC = () => {
                       disableRipple
                       sx={{ 
                         ...STRIP_ITEM_STYLE,
-                        width: '40px',
+                        width: '36px',
                         padding: 0,
                         '&:hover': { bgcolor: '#F1F5F9' }
                       }}
                     >
-                      <RepeatIcon sx={{ fontSize: '20px' }} />
+                      <RepeatIcon sx={{ fontSize: '18px' }} />
                     </IconButton>
                   </Tooltip>
                 </div>
@@ -643,7 +655,7 @@ const CategoryDashboard: React.FC = () => {
                     position: 'absolute', 
                     left: '12px', 
                     zIndex: 1,
-                    fontSize: '18px', 
+                    fontSize: '16px', 
                     color: cardFilter.length > 0 ? '#6366F1' : '#94A3B8',
                     transition: 'color 0.2s',
                     pointerEvents: 'none'
@@ -659,12 +671,12 @@ const CategoryDashboard: React.FC = () => {
                         return <span style={{ color: '#94A3B8', fontWeight: 500 }}>Cards</span>;
                       }
                       if (selected.length === 1) {
-                        return <span style={{ color: '#111827', fontWeight: 700, fontSize: '13px' }}>{selected[0]}</span>;
+                        return <span style={{ color: '#111827', fontWeight: 700, fontSize: '12px' }}>{selected[0]}</span>;
                       }
                       return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span style={{ color: '#111827', fontWeight: 700 }}>{selected.length}</span>
-                          <span style={{ color: '#64748B', fontSize: '12px' }}>Cards</span>
+                          <span style={{ color: '#64748B', fontSize: '11px' }}>Cards</span>
                         </div>
                       );
                     }}
@@ -681,7 +693,7 @@ const CategoryDashboard: React.FC = () => {
                       },
                       '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
                       '& .MuiSvgIcon-root': { 
-                        fontSize: '18px', 
+                        fontSize: '16px', 
                         right: cardFilter.length > 0 ? '24px' : '8px',
                         color: '#94A3B8'
                       },
@@ -694,7 +706,7 @@ const CategoryDashboard: React.FC = () => {
                           border: '1px solid #E2E8F0',
                           boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
                           '& .MuiMenuItem-root': {
-                            fontSize: '14px',
+                            fontSize: '13px',
                             fontWeight: 500,
                             py: 1,
                             '&.Mui-selected': { bgcolor: '#F1F5F9' },
@@ -835,7 +847,7 @@ const CategoryDashboard: React.FC = () => {
                   background: 'linear-gradient(to right, transparent, rgba(229, 231, 235, 0.8))',
                 }} />
                 <h2 style={{
-                  fontSize: '11px',
+                  fontSize: '10px',
                   fontWeight: 700,
                   margin: 0,
                   color: '#94A3B8',
@@ -900,10 +912,10 @@ const CategoryDashboard: React.FC = () => {
                         <TableChartIcon sx={{ fontSize: '40px' }} />
                       </Box>
                       <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', mb: 0.5 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', mb: 0.5, fontSize: '1rem' }}>
                           No transactions found
                         </Typography>
-                        <Typography sx={{ color: '#64748B', maxWidth: '300px', fontSize: '14px' }}>
+                        <Typography sx={{ color: '#64748B', maxWidth: '300px', fontSize: '13px' }}>
                           There are no recorded transactions for {new Date(`${selectedYear}-${selectedMonth}-01`).toLocaleDateString('default', { month: 'long', year: 'numeric' })}.
                         </Typography>
                       </Box>

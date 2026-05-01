@@ -13,6 +13,7 @@ import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import CheckIcon from '@mui/icons-material/Check';
 import EditIcon from '@mui/icons-material/Edit';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { ExpensesModalProps, Expense } from '../types';
 import { formatNumber, getCurrencySymbol } from '../utils/format';
 import { dateUtils } from '../utils/dateUtils';
@@ -20,6 +21,8 @@ import { LineChart } from '@mui/x-charts/LineChart';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import DeleteIcon from '@mui/icons-material/Delete';
+import Checkbox from '@mui/material/Checkbox';
+import Tooltip from '@mui/material/Tooltip';
 import { useCategories } from '../utils/useCategories';
 import { TABLE_HEADER_CELL_STYLE, TABLE_BODY_CELL_STYLE, TABLE_ROW_HOVER_STYLE, TABLE_ROW_HOVER_BACKGROUND } from '../utils/tableStyles';
 
@@ -36,50 +39,75 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
   const [editPrice, setEditPrice] = React.useState<string>('');
   const [editCategory, setEditCategory] = React.useState<string>('');
   const [editName, setEditName] = React.useState<string>('');
+  const [originalCategory, setOriginalCategory] = React.useState<string>('');
+  const [createRule, setCreateRule] = React.useState(false);
   const { categories: availableCategories } = useCategories();
 
   React.useEffect(() => {
-    if (data.type) {
-      switch (data.type) {
-        case "Total Expenses":
-          fetch(`/api/expenses_by_month?month=10&groupByYear=false`)
-            .then((response) => response.json())
-            .then((data) => setTimeSeriesData(data))
-            .catch((error) => console.error("Error fetching expense time series data:", error));
-          break;
-        case "Credit Card Expenses":
-          fetch(`/api/expenses_by_month?month=10&groupByYear=false`)
-            .then((response) => response.json())
-            .then((data) => setTimeSeriesData(data))
-            .catch((error) => console.error("Error fetching credit card expense time series data:", error));
-          break;
-        case "Bank Transactions":
-          // Don't fetch time series data for Bank Transactions - no graph needed
-          setTimeSeriesData([]);
-          break;
-        default:
-          fetch(`/api/category_by_month?category=${data.type}&month=10&groupByYear=false`)
-            .then((response) => response.json())
-            .then((data) => setTimeSeriesData(data))
-            .catch((error) => console.error("Error fetching time series data:", error));
-      }
+    if (!data.type) return;
+
+    const applySeries = (payload: unknown) => {
+      setTimeSeriesData(Array.isArray(payload) ? payload : []);
+    };
+
+    switch (data.type) {
+      case "Total Expenses":
+      case "Credit Card Expenses":
+        fetch(`/api/expenses_by_month?month=10&groupByYear=false`)
+          .then(async (res) => {
+            const body = await res.json();
+            if (!res.ok) {
+              console.error("expenses_by_month error:", body);
+              applySeries([]);
+              return;
+            }
+            applySeries(body);
+          })
+          .catch((error) => {
+            console.error("Error fetching expense time series data:", error);
+            setTimeSeriesData([]);
+          });
+        break;
+      case "Bank Transactions":
+        setTimeSeriesData([]);
+        break;
+      default:
+        fetch(
+          `/api/category_by_month?category=${encodeURIComponent(data.type)}&month=10&groupByYear=false`
+        )
+          .then(async (res) => {
+            const body = await res.json();
+            if (!res.ok) {
+              console.error("category_by_month error:", body);
+              applySeries([]);
+              return;
+            }
+            applySeries(body);
+          })
+          .catch((error) => {
+            console.error("Error fetching time series data:", error);
+            setTimeSeriesData([]);
+          });
     }
   }, [data.type, data.data]);
 
   const getFormattedMonths = () =>
-    timeSeriesData.map((data) => {
-      if (!data.year_month) return new Date(parseInt(data.year), 0);
-      const [month, year] = data.year_month.split("-");
-      return new Date(parseInt(year), parseInt(month) - 1);
+    timeSeriesData.map((row) => {
+      if (!row.year_month) return new Date(parseInt(row.year, 10), 0);
+      const [m, y] = row.year_month.split("-");
+      return new Date(parseInt(y, 10), parseInt(m, 10) - 1);
     });
 
-  const getAmounts = () => timeSeriesData.map((data) => data.amount);
+  const getAmounts = () => timeSeriesData.map((row) => row.amount);
 
   const handleEditClick = (expense: Expense) => {
     setEditingExpense(expense);
     setEditPrice(Math.abs(expense.price).toString());
-    setEditCategory(expense.category || (data.type === "Bank Transactions" ? 'Bank' : data.type));
+    const cat = expense.category || (data.type === "Bank Transactions" ? 'Bank' : data.type);
+    setEditCategory(cat);
+    setOriginalCategory(cat);
     setEditName(expense.name);
+    setCreateRule(false);
   };
 
   const handleSaveClick = async () => {
@@ -87,6 +115,19 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
       const newPrice = parseFloat(editPrice);
       if (!isNaN(newPrice)) {
         const priceWithSign = editingExpense.price < 0 ? -newPrice : newPrice;
+
+        // Create categorization rule if requested
+        if (createRule && editCategory && editCategory !== originalCategory) {
+          try {
+            await fetch('/api/categorization_rules', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name_pattern: editingExpense.name, target_category: editCategory }),
+            });
+          } catch (err) {
+            console.error('Failed to create categorization rule:', err);
+          }
+        }
         
         try {
           const updateData: any = { price: priceWithSign };
@@ -106,7 +147,6 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
           });
           
           if (response.ok) {
-            // Update the local data
             const updatedData = data.data.map((item: Expense) => 
               item.identifier === editingExpense.identifier && item.vendor === editingExpense.vendor
                 ? { ...item, price: priceWithSign, category: editCategory, name: editName }
@@ -118,7 +158,6 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
               data: updatedData
             });
             
-            // Trigger a refresh of the dashboard data
             window.dispatchEvent(new CustomEvent('dataRefresh'));
           } else {
             console.error('Failed to update transaction');
@@ -128,12 +167,14 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
         }
         
         setEditingExpense(null);
+        setCreateRule(false);
       }
     }
   };
 
   const handleCancelClick = () => {
     setEditingExpense(null);
+    setCreateRule(false);
   };
 
   const handleRowClick = (expense: Expense) => {
@@ -341,7 +382,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
-            <Box sx={{ width: '240px', flex: '0 0 240px' }}>Description</Box>
+            <Box sx={{ width: '160px', flex: '0 0 160px' }}>Description</Box>
             <Box sx={{ flex: 1 }}>Category</Box>
             <Box sx={{ flex: 1, textAlign: 'right' }}>Amount</Box>
             <Box sx={{ flex: 1, textAlign: 'center' }}>Date</Box>
@@ -372,7 +413,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                   }}
                 >
                   {/* Description */}
-                  <Box sx={{ width: '240px', flex: '0 0 240px', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ width: '160px', flex: '0 0 160px', display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ 
                       width: 32, 
                       height: 32, 
@@ -395,7 +436,6 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                           onChange={(e) => setEditName(e.target.value)}
                           size="small"
                           variant="standard"
-                          autoFocus
                           InputProps={{ disableUnderline: true }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleSaveClick();
@@ -446,38 +486,81 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({ open, onClose, data, colo
                   {/* Category */}
                   <Box sx={{ flex: 1 }}>
                     {isEditing ? (
-                      <Autocomplete
-                        size="small"
-                        options={availableCategories}
-                        value={editCategory}
-                        onChange={(_, val) => setEditCategory(val || '')}
-                        freeSolo
-                        renderInput={(params) => (
-                          <TextField 
-                            {...params} 
-                            variant="standard" 
-                            InputProps={{ ...params.InputProps, disableUnderline: true }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveClick();
-                              if (e.key === 'Escape') {
-                                e.stopPropagation();
-                                handleCancelClick();
-                              }
-                            }}
-                            sx={{ 
-                              '& .MuiInputBase-input': { 
-                                fontSize: '11px', 
-                                fontWeight: 700,
-                                p: '4px 8px !important', 
-                                bgcolor: '#FFF', 
-                                borderRadius: '6px',
-                                border: '1px solid #E2E8F0',
-                                textTransform: 'uppercase'
-                              } 
-                            }}
-                          />
+                      <Box>
+                        <Autocomplete
+                          size="small"
+                          options={availableCategories}
+                          value={editCategory}
+                          onChange={(_, val) => setEditCategory(val || '')}
+                          onInputChange={(_, val) => setEditCategory(val)}
+                          freeSolo
+                          renderInput={(params) => (
+                            <TextField 
+                              {...params} 
+                              variant="standard"
+                              autoFocus
+                              InputProps={{ ...params.InputProps, disableUnderline: true }}
+                              inputProps={{ ...params.inputProps, onFocus: (e) => (e.target as HTMLInputElement).select() }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveClick();
+                                if (e.key === 'Escape') {
+                                  e.stopPropagation();
+                                  handleCancelClick();
+                                }
+                              }}
+                              sx={{ 
+                                '& .MuiInputBase-input': { 
+                                  fontSize: '11px', 
+                                  fontWeight: 700,
+                                  p: '4px 8px !important', 
+                                  bgcolor: '#FFF', 
+                                  borderRadius: '6px',
+                                  border: '1px solid #E2E8F0',
+                                  textTransform: 'uppercase'
+                                } 
+                              }}
+                            />
+                          )}
+                        />
+                        {editCategory !== originalCategory && editCategory && (
+                          <Tooltip title={`Always categorize "${expense.name}" as ${editCategory}`} arrow placement="bottom">
+                            <Box
+                              onClick={() => setCreateRule(r => !r)}
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                mt: '4px',
+                                px: '6px',
+                                py: '2px',
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                border: '1px solid',
+                                borderColor: createRule ? '#6366F1' : '#E2E8F0',
+                                bgcolor: createRule ? 'rgba(99,102,241,0.07)' : 'transparent',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              <AutoFixHighIcon sx={{ fontSize: '10px', color: createRule ? '#6366F1' : '#94A3B8' }} />
+                              <Typography sx={{ fontSize: '10px', fontWeight: 600, color: createRule ? '#6366F1' : '#94A3B8', userSelect: 'none' }}>
+                                Save as rule
+                              </Typography>
+                              <Checkbox
+                                checked={createRule}
+                                onChange={() => setCreateRule(r => !r)}
+                                size="small"
+                                onClick={e => e.stopPropagation()}
+                                sx={{
+                                  p: 0,
+                                  color: '#CBD5E1',
+                                  '&.Mui-checked': { color: '#6366F1' },
+                                  '& .MuiSvgIcon-root': { fontSize: '13px' },
+                                }}
+                              />
+                            </Box>
+                          </Tooltip>
                         )}
-                      />
+                      </Box>
                     ) : (
                       <span style={{
                         fontSize: '11px',

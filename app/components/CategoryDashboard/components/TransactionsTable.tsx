@@ -1,9 +1,10 @@
 import React from 'react';
-import { Box, Typography, IconButton, TextField, Autocomplete, Tooltip, Avatar } from '@mui/material';
+import { Box, Typography, IconButton, TextField, Autocomplete, Tooltip, Avatar, Checkbox } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { formatNumber, getCurrencySymbol } from '../utils/formatUtils';
 import { dateUtils } from '../utils/dateUtils';
 import { useCategories } from '../utils/useCategories';
@@ -38,6 +39,8 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
   const [editPrice, setEditPrice] = React.useState<string>('');
   const [editCategory, setEditCategory] = React.useState<string>('');
   const [editName, setEditName] = React.useState<string>('');
+  const [originalCategory, setOriginalCategory] = React.useState<string>('');
+  const [createRule, setCreateRule] = React.useState(false);
   const { categories: availableCategories } = useCategories();
 
   const handleEditClick = (tx: Transaction) => {
@@ -45,14 +48,33 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
     setEditPrice(Math.abs(tx.price).toString());
     setEditCategory(tx.category);
     setEditName(tx.name);
+    setOriginalCategory(tx.category);
+    setCreateRule(false);
   };
 
-  const handleSaveClick = (tx: Transaction) => {
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setCreateRule(false);
+  };
+
+  const handleSaveClick = async (tx: Transaction) => {
     if (editingId && editPrice) {
       const newPrice = parseFloat(editPrice);
       if (!isNaN(newPrice)) {
+        if (createRule && editCategory && editCategory !== originalCategory) {
+          try {
+            await fetch('/api/categorization_rules', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name_pattern: tx.name, target_category: editCategory }),
+            });
+          } catch (err) {
+            console.error('Failed to create categorization rule:', err);
+          }
+        }
         onUpdate?.(tx, tx.price < 0 ? -newPrice : newPrice, editCategory, editName);
         setEditingId(null);
+        setCreateRule(false);
       }
     }
   };
@@ -70,11 +92,11 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
         pb: 1.5, 
         borderBottom: '1px solid rgba(229, 231, 235, 0.5)' 
       }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</Typography>
-        <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</Typography>
-        <Typography align="right" sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</Typography>
-        <Typography align="right" sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</Typography>
-        <Typography align="right" sx={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</Typography>
+        <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</Typography>
+        <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</Typography>
+        <Typography align="right" sx={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</Typography>
+        <Typography align="right" sx={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</Typography>
+        <Typography align="right" sx={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</Typography>
       </Box>
 
       {/* Rows */}
@@ -108,9 +130,9 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
               <Avatar 
                 src={logoUrl || undefined}
                 sx={{ 
-                  width: 32, 
-                  height: 32, 
-                  fontSize: '14px', 
+                  width: 28, 
+                  height: 28, 
+                  fontSize: '12px', 
                   bgcolor: '#F1F5F9', 
                   color: '#64748b',
                   border: '1px solid #E2E8F0'
@@ -126,7 +148,6 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                     value={editName} 
                     onChange={e => setEditName(e.target.value)} 
                     variant="standard" 
-                    autoFocus 
                     InputProps={{ disableUnderline: true }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === 'Escape') {
@@ -136,7 +157,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                     sx={{ 
                       '& .MuiInputBase-input': { 
                         fontWeight: 600, 
-                        fontSize: '14px', 
+                        fontSize: '13px', 
                         p: '4px 8px', 
                         bgcolor: '#FFF', 
                         borderRadius: '6px',
@@ -145,12 +166,12 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                     }}
                   />
                 ) : (
-                  <Typography sx={{ fontWeight: 600, fontSize: '14px', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <Typography sx={{ fontWeight: 600, fontSize: '13px', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {tx.name}
                   </Typography>
                 )}
                 {!isEditing && (
-                  <Typography sx={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography sx={{ fontSize: '11px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     {tx.vendor}
                     {tx.account_number && (
                       <>
@@ -174,39 +195,82 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
 
             <Box>
               {isEditing ? (
-                <Autocomplete
-                  size="small"
-                  options={availableCategories}
-                  value={editCategory}
-                  onChange={(_, val) => setEditCategory(val || '')}
-                  freeSolo
-                  renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      variant="standard" 
-                      InputProps={{ ...params.InputProps, disableUnderline: true }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === 'Escape') {
-                          handleSaveClick(tx);
-                        }
-                      }}
-                      sx={{ 
-                        '& .MuiInputBase-input': { 
-                          fontSize: '11px', 
-                          fontWeight: 700,
-                          p: '4px 8px !important', 
-                          bgcolor: '#FFF', 
-                          borderRadius: '6px',
-                          border: '1px solid #E2E8F0',
-                          textTransform: 'uppercase'
-                        } 
-                      }}
-                    />
+                <Box>
+                  <Autocomplete
+                    size="small"
+                    options={availableCategories}
+                    value={editCategory}
+                    onChange={(_, val) => setEditCategory(val || '')}
+                    onInputChange={(_, val) => setEditCategory(val)}
+                    freeSolo
+                    renderInput={(params) => (
+                      <TextField 
+                        {...params} 
+                        variant="standard" 
+                        autoFocus
+                        InputProps={{ ...params.InputProps, disableUnderline: true }}
+                        inputProps={{ ...params.inputProps, onFocus: (e) => (e.target as HTMLInputElement).select() }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === 'Escape') {
+                            handleSaveClick(tx);
+                          }
+                        }}
+                        sx={{ 
+                          '& .MuiInputBase-input': { 
+                            fontSize: '10px', 
+                            fontWeight: 700,
+                            p: '4px 8px !important', 
+                            bgcolor: '#FFF', 
+                            borderRadius: '6px',
+                            border: '1px solid #E2E8F0',
+                            textTransform: 'uppercase'
+                          } 
+                        }}
+                      />
+                    )}
+                  />
+                  {editCategory !== originalCategory && editCategory && (
+                    <Tooltip title={`Always categorize "${tx.name}" as ${editCategory}`} arrow placement="bottom">
+                      <Box
+                        onClick={() => setCreateRule(r => !r)}
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          mt: '4px',
+                          px: '6px',
+                          py: '2px',
+                          borderRadius: '5px',
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          borderColor: createRule ? '#6366F1' : '#E2E8F0',
+                          bgcolor: createRule ? 'rgba(99,102,241,0.07)' : 'transparent',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <AutoFixHighIcon sx={{ fontSize: '10px', color: createRule ? '#6366F1' : '#94A3B8' }} />
+                        <Typography sx={{ fontSize: '10px', fontWeight: 600, color: createRule ? '#6366F1' : '#94A3B8', userSelect: 'none' }}>
+                          Save as rule
+                        </Typography>
+                        <Checkbox
+                          checked={createRule}
+                          onChange={() => setCreateRule(r => !r)}
+                          size="small"
+                          onClick={e => e.stopPropagation()}
+                          sx={{
+                            p: 0,
+                            color: '#CBD5E1',
+                            '&.Mui-checked': { color: '#6366F1' },
+                            '& .MuiSvgIcon-root': { fontSize: '13px' },
+                          }}
+                        />
+                      </Box>
+                    </Tooltip>
                   )}
-                />
+                </Box>
               ) : (
                 <span style={{
-                  fontSize: '11px',
+                  fontSize: '10px',
                   fontWeight: 700,
                   padding: '4px 10px',
                   borderRadius: '6px',
@@ -219,7 +283,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
 
             <Typography align="right" sx={{ 
               fontWeight: 700, 
-              fontSize: '15px'
+              fontSize: '13px'
             }}>
               {isEditing ? (
                 <TextField 
@@ -238,7 +302,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
                     width: '100px',
                     '& .MuiInputBase-input': { 
                       fontWeight: 700, 
-                      fontSize: '15px', 
+                      fontSize: '13px', 
                       p: '4px 8px', 
                       bgcolor: '#FFF', 
                       borderRadius: '6px',
@@ -255,7 +319,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
               )}
             </Typography>
 
-            <Typography align="right" sx={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
+            <Typography align="right" sx={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
               {dateUtils.formatDate(tx.date)}
             </Typography>
 
@@ -263,7 +327,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions, isL
               {isEditing ? (
                 <>
                   <IconButton size="small" color="success" onClick={() => handleSaveClick(tx)}><CheckIcon fontSize="small" /></IconButton>
-                  <IconButton size="small" color="error" onClick={() => setEditingId(null)}><CloseIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" color="error" onClick={handleCancelEdit}><CloseIcon fontSize="small" /></IconButton>
                 </>
               ) : (
                 <>

@@ -21,8 +21,8 @@ const SidebarContainer = styled(Box)({
   top: 0,
   bottom: 0,
   width: `${SIDEBAR_WIDTH}px`,
-  backgroundColor: '#FFFFFF',
-  borderRight: '1px solid #E5E7EB',
+  backgroundColor: '#101E35',
+  borderRight: '1px solid #1E3050',
   display: 'flex',
   flexDirection: 'column',
   zIndex: 1200,
@@ -54,16 +54,16 @@ const NavItem = styled(Box, { shouldForwardProp: (prop) => prop !== 'active' })<
   padding: '10px 12px',
   borderRadius: '8px',
   cursor: 'pointer',
-  color: active ? '#6366F1' : '#4B5563',
-  backgroundColor: active ? '#EEF2FF' : 'transparent',
+  color: active ? '#FFFFFF' : '#C8DCEF',
+  backgroundColor: active ? 'rgba(255,255,255,0.12)' : 'transparent',
   fontFamily: "'Inter', sans-serif",
   fontSize: '14px',
   fontWeight: active ? 600 : 500,
   transition: 'all 0.15s ease',
   userSelect: 'none' as const,
   '&:hover': {
-    backgroundColor: active ? '#E0E7FF' : '#F3F4F6',
-    color: active ? '#4F46E5' : '#111827',
+    backgroundColor: active ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)',
+    color: '#FFFFFF',
   },
   '& .MuiSvgIcon-root': {
     fontSize: '20px',
@@ -73,7 +73,7 @@ const NavItem = styled(Box, { shouldForwardProp: (prop) => prop !== 'active' })<
 
 const BottomSection = styled(Box)({
   padding: '12px',
-  borderTop: '1px solid #E5E7EB',
+  borderTop: '1px solid #1E3050',
   display: 'flex',
   flexDirection: 'column',
   gap: '2px',
@@ -178,12 +178,12 @@ function AppShell({ children }: AppShellProps) {
     <>
       <SidebarContainer>
         <LogoSection onClick={() => { router.push('/'); setManagementModalOpen(false); }}>
-          <AccountBalanceWalletIcon sx={{ fontSize: '24px', color: '#6366F1' }} />
+          <AccountBalanceWalletIcon sx={{ fontSize: '24px', color: '#7FB3F5' }} />
           <Typography sx={{
             fontFamily: "'Inter', sans-serif",
             fontWeight: 700,
             fontSize: '1.1rem',
-            color: '#111827',
+            color: '#FFFFFF',
             letterSpacing: '-0.01em',
           }}>
             Clarify
@@ -207,7 +207,7 @@ function AppShell({ children }: AppShellProps) {
           </NavItem>
 
 
-          <Box sx={{ height: '1px', bgcolor: '#E5E7EB', my: 1, mx: 1.5, opacity: 0.6 }} />
+          <Box sx={{ height: '1px', bgcolor: '#1E3050', my: 1, mx: 1.5, opacity: 0.8 }} />
 
           <NavItem active={managementModalOpen} onClick={() => handleOpenManagement('accounts')}>
             <SettingsIcon />
