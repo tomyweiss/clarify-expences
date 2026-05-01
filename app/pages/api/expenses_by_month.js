@@ -15,57 +15,63 @@ const handler = createApiHandler({
     if (groupByYearBool) {
       return {
         sql: `
-          SELECT 
-            (SUM(price) + COALESCE((
+          SELECT
+            (grp.price_sum + COALESCE((
               SELECT SUM(rt.amount * 12)
               FROM recurrent_transactions rt
-              WHERE rt.start_date <= (DATE_TRUNC('year', date) + INTERVAL '1 year' - INTERVAL '1 day')
-              AND (rt.end_date IS NULL OR rt.end_date >= DATE_TRUNC('year', date))
+              WHERE rt.start_date <= (grp.year_ts + INTERVAL '1 year' - INTERVAL '1 day')
+              AND (rt.end_date IS NULL OR rt.end_date >= grp.year_ts)
             ), 0)) AS amount,
-            TO_CHAR(date, 'YYYY') AS year,
-            DATE_TRUNC('year', date) AS year_sort
-          FROM transactions
-          WHERE category != 'Bank'
-          GROUP BY TO_CHAR(date, 'YYYY'), DATE_TRUNC('year', date)
-          ORDER BY year_sort DESC
+            TO_CHAR(grp.year_ts, 'YYYY') AS year,
+            grp.year_ts AS year_sort
+          FROM (
+            SELECT
+              DATE_TRUNC('year', date) AS year_ts,
+              SUM(price) AS price_sum
+            FROM transactions
+            WHERE category != 'Bank'
+            GROUP BY DATE_TRUNC('year', date)
+          ) grp
+          ORDER BY grp.year_ts DESC
           LIMIT $1
         `,
-        params: [monthNumber]
+        params: [monthNumber],
       };
     }
 
     return {
       sql: `
-        SELECT 
-          (SUM(price) + COALESCE((
+        SELECT
+          (grp.price_sum + COALESCE((
             SELECT SUM(rt.amount)
             FROM recurrent_transactions rt
-            WHERE rt.start_date <= (DATE_TRUNC('month', date) + INTERVAL '1 month' - INTERVAL '1 day')
-            AND (rt.end_date IS NULL OR rt.end_date >= DATE_TRUNC('month', date))
+            WHERE rt.start_date <= (grp.month_ts + INTERVAL '1 month' - INTERVAL '1 day')
+            AND (rt.end_date IS NULL OR rt.end_date >= grp.month_ts)
           ), 0)) AS amount,
-          TO_CHAR(date, 'YYYY') AS year,
-          TO_CHAR(date, 'MM') AS month,
-          TO_CHAR(date, 'MM-YYYY') AS year_month,
-          DATE_TRUNC('month', date) AS year_sort
-        FROM transactions
-        WHERE category != 'Bank'
-        GROUP BY 
-          TO_CHAR(date, 'YYYY'),
-          TO_CHAR(date, 'MM'),
-          TO_CHAR(date, 'MM-YYYY'),
-          DATE_TRUNC('month', date)
-        ORDER BY year_sort DESC
+          TO_CHAR(grp.month_ts, 'YYYY') AS year,
+          TO_CHAR(grp.month_ts, 'MM') AS month,
+          TO_CHAR(grp.month_ts, 'MM-YYYY') AS year_month,
+          grp.month_ts AS year_sort
+        FROM (
+          SELECT
+            DATE_TRUNC('month', date) AS month_ts,
+            SUM(price) AS price_sum
+          FROM transactions
+          WHERE category != 'Bank'
+          GROUP BY DATE_TRUNC('month', date)
+        ) grp
+        ORDER BY grp.month_ts DESC
         LIMIT $1
       `,
-      params: [monthNumber]
+      params: [monthNumber],
     };
   },
   transform: (result) => {
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
-      amount: parseFloat(row.amount) || 0
+      amount: parseFloat(row.amount) || 0,
     }));
-  }
+  },
 });
 
-export default handler; 
+export default handler;
